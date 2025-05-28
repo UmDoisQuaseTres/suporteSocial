@@ -6,8 +6,8 @@ import type { Chat, ActiveChat, Message, User } from './types';
 
 // Dados de exemplo (MOCK) - como definidos anteriormente
 const mockUsers: { [id: string]: User } = {
-  'currentUser': { id: 'currentUser', name: 'Eu', avatarUrl: 'https://placehold.co/40x40/FFFFFF/000000?text=EU' },
-  'amigo1': { id: 'amigo1', name: 'Amigo 1', avatarUrl: 'https://placehold.co/50x50/25D366/FFFFFF?text=A1' },
+  'currentUser': { id: 'currentUser', name: 'Eu', avatarUrl: 'https://placehold.co/40x40/FFFFFF/000000?text=EU', about: 'Eu sou o usuário atual' },
+  'amigo1': { id: 'amigo1', name: 'Amigo 1', avatarUrl: 'https://placehold.co/50x50/25D366/FFFFFF?text=A1', about: 'Amigo 1 é um amigo de longa data' },
   'user2': { id: 'user2', name: 'João', avatarUrl: 'https://placehold.co/50x50/FBC531/FFFFFF?text=J' },
   'user3': { id: 'user3', name: 'Colega de Trabalho', avatarUrl: 'https://placehold.co/50x50/3498DB/FFFFFF?text=C2' },
   'promoBot': { id: 'promoBot', name: 'Promo Bot', avatarUrl: 'https://placehold.co/50x50/E74C3C/FFFFFF?text=N' },
@@ -224,6 +224,7 @@ function App() {
             chatInfo={viewingContactInfoFor}
             onClose={handleCloseContactInfoPanel}
             panelWidthClass="w-full md:w-1/4" // Define a largura do painel de info
+            currentUserId={currentUserId}
           />
         )}
       </div>
