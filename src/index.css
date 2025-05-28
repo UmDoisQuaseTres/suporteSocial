@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif; /* Você pode adicionar a importação do Inter no seu index.html */
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Scrollbars (opcional, mas melhora a aparência) */
+.chat-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.chat-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #4a5568;
+    border-radius: 3px;
+}
+.chat-scrollbar::-webkit-scrollbar-track {
+    background-color: #2d3748;
+}
