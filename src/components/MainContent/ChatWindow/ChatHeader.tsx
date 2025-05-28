@@ -1,44 +1,60 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faPaperclip, faEllipsisV, faArchive, faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons'; // Adicionado faArchive e faArrowUpFromBracket
-import type { ActiveChat } from '../../../types';
+import { faSearch, faPaperclip, faEllipsisV, faArchive, faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons';
+import type { ActiveChat, Chat } // Adicionado Chat
+from '../../../types';
 
 interface ChatHeaderProps {
   chat: ActiveChat;
-  onToggleArchiveStatus: (chatId: string) => void; // Nova prop
+  onToggleArchiveStatus: (chatId: string) => void;
+  onShowContactInfo: (chat: Chat) => void; // Nova prop
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ chat, onToggleArchiveStatus }) => {
-  const getStatus = () => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ chat, onToggleArchiveStatus, onShowContactInfo }) => {
+  // ... (função getStatus como antes)
+   const getStatus = () => {
     if (chat.type === 'user') {
-      const random = Math.random();
-      if (random < 0.3) return 'online';
-      if (random < 0.6) return `visto por último hoje às ${new Date(Date.now() - Math.random() * 10000000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-      return 'a digitar...';
+      // Simulação de status online/visto por último para utilizadores 1-1
+      const otherParticipants = chat.participants?.filter(p => p.id !== 'currentUser'); // Assumindo que currentUserId é 'currentUser'
+      const lastSeenOptions = ["online", `visto por último hoje às ${new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`, "a digitar..."];
+      if (otherParticipants && otherParticipants.length === 1) {
+        // Para simplificar, vamos apenas usar uma opção aleatória.
+        // Numa app real, este status viria do backend.
+        return lastSeenOptions[Math.floor(Math.random() * lastSeenOptions.length)];
+      }
+      return "offline"; // Fallback
     }
-    return `${chat.participants?.length || ''} participantes`;
+    // Para grupos, mostrar o número de participantes
+    return `${chat.participants?.length || 0} participantes`;
   };
+
 
   const handleArchiveClick = () => {
     onToggleArchiveStatus(chat.id);
   };
 
+  const handleHeaderClick = () => {
+    onShowContactInfo(chat); // Chama a função para mostrar o painel de info
+  };
+
   return (
     <header className="flex h-[60px] items-center justify-between border-b border-gray-700/50 bg-whatsapp-header-bg p-3 text-whatsapp-text-primary">
-      <div className="flex items-center overflow-hidden"> {/* Adicionado overflow-hidden para nomes longos */}
+      {/* Área clicável para nome e avatar */}
+      <div className="flex flex-1 cursor-pointer items-center overflow-hidden" onClick={handleHeaderClick}>
         <img
           src={chat.avatarUrl || 'https://placehold.co/40x40/CCCCCC/000000?text=?'}
           alt={`${chat.name} Avatar`}
-          className="mr-3 h-10 w-10 flex-shrink-0 cursor-pointer rounded-full"
+          className="mr-3 h-10 w-10 flex-shrink-0 rounded-full"
           onError={(e) => (e.currentTarget.src = 'https://placehold.co/40x40/CCCCCC/000000?text=?')}
         />
-        <div className="min-w-0 flex-1"> {/* Adicionado min-w-0 para truncar corretamente */}
+        <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-medium">{chat.name}</h3>
           <p className="truncate text-xs text-whatsapp-text-secondary">{getStatus()}</p>
         </div>
       </div>
-      <div className="flex flex-shrink-0 items-center space-x-2 md:space-x-3"> {/* Adicionado flex-shrink-0 */}
-        {/* Botão de Arquivar/Desarquivar */}
+
+      {/* Ícones de ação */}
+      <div className="flex flex-shrink-0 items-center space-x-1 md:space-x-2"> {/* Reduzido space-x para mais ícones */}
         <button
             onClick={handleArchiveClick}
             className="p-2 text-xl text-whatsapp-icon hover:text-gray-200"
@@ -46,14 +62,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chat, onToggleArchiveStatus }) 
         >
             <FontAwesomeIcon icon={chat.isArchived ? faArrowUpFromBracket : faArchive} />
         </button>
-        <button className="p-2 text-xl text-whatsapp-icon hover:text-gray-200">
+        <button className="p-2 text-xl text-whatsapp-icon hover:text-gray-200" title="Pesquisar">
           <FontAwesomeIcon icon={faSearch} />
         </button>
-        {/* Ocultar clipe de papel em telas menores para dar espaço ao botão de arquivar */}
-        <button className="hidden p-2 text-xl text-whatsapp-icon hover:text-gray-200 sm:block">
+        <button className="hidden p-2 text-xl text-whatsapp-icon hover:text-gray-200 sm:block" title="Anexar">
           <FontAwesomeIcon icon={faPaperclip} className="rotate-[-45deg] transform" />
         </button>
-        <button className="p-2 text-xl text-whatsapp-icon hover:text-gray-200">
+        <button className="p-2 text-xl text-whatsapp-icon hover:text-gray-200" title="Mais opções">
           <FontAwesomeIcon icon={faEllipsisV} />
         </button>
       </div>

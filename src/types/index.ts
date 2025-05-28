@@ -10,6 +10,9 @@ export interface User {
     id: string;
     text?: string;
     imageUrl?: string;
+    audioUrl?: string; // Novo: para indicar áudio
+    videoUrl?: string; // Novo: para indicar vídeo
+    mediaType?: 'image' | 'audio' | 'video'; // Novo: para facilitar
     timestamp: number; // Usaremos timestamp para ordenação e formatação
     senderId: string; // Para saber quem enviou
     receiverId?: string; // Para chats 1-1

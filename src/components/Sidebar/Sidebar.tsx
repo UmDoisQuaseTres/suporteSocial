@@ -202,6 +202,7 @@ interface SidebarProps {
   onToggleNewChatView: () => void;
   availableContacts: User[];
   onStartNewChat: (contact: User) => void;
+  sidebarWidthClass?: string; // Adicionando a prop opcional
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -216,7 +217,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   showNewChatView,
   onToggleNewChatView,
   availableContacts,
-  onStartNewChat
+  onStartNewChat,
+  sidebarWidthClass // Recebendo a prop
 }) => {
   const [contactSearchTerm, setContactSearchTerm] = useState<string>('');
 
@@ -228,7 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [showNewChatView]);
 
   return (
-    <aside className="flex w-full flex-col border-r border-gray-700/50 bg-whatsapp-sidebar-bg text-whatsapp-text-primary md:w-1/3">
+    <aside className={`flex w-full flex-col border-r border-gray-700/50 bg-whatsapp-sidebar-bg text-whatsapp-text-primary ${sidebarWidthClass || 'md:w-1/3'}`}>
       <SidebarHeader
         showArchived={showArchived}
         showNewChatView={showNewChatView}

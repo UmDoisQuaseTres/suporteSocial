@@ -1,30 +1,37 @@
 import React from 'react';
 import InitialScreen from './InitialScreen';
 import ChatWindow from './ChatWindow/ChatWindow';
-import type { ActiveChat } from '../../types';
+import type { ActiveChat, Chat } // Adicionado Chat
+from '../../types';
 
 interface MainContentProps {
+  mainContentWidthClass: string; // Nova prop para largura dinâmica
   activeChat: ActiveChat | null;
   currentUserId: string;
   onSendMessage: (chatId: string, messageText: string) => void;
-  onToggleArchiveStatus: (chatId: string) => void; // Nova prop
+  onToggleArchiveStatus: (chatId: string) => void;
+  onShowContactInfo: (chat: Chat) => void; // Nova prop
 }
 
 const MainContent: React.FC<MainContentProps> = ({
+  mainContentWidthClass,
   activeChat,
   currentUserId,
   onSendMessage,
-  onToggleArchiveStatus // Recebendo a nova prop
+  onToggleArchiveStatus,
+  onShowContactInfo // Recebendo
 }) => {
   return (
-    <main className="flex w-full flex-col bg-whatsapp-chat-bg md:w-2/3">
+    // Aplicando a classe de largura dinâmica
+    <main className={`flex flex-col bg-whatsapp-chat-bg ${mainContentWidthClass}`}>
       {activeChat ? (
         <ChatWindow
           chat={activeChat}
           currentUserId={currentUserId}
           onSendMessage={onSendMessage}
-          messages={activeChat.messages}
-          onToggleArchiveStatus={onToggleArchiveStatus} // Passando para ChatWindow
+          messages={activeChat.messages} // messages já está em ActiveChat
+          onToggleArchiveStatus={onToggleArchiveStatus}
+          onShowContactInfo={onShowContactInfo} // Passando para ChatWindow
         />
       ) : (
         <InitialScreen />

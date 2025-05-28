@@ -2,14 +2,16 @@ import React from 'react';
 import ChatHeader from './ChatHeader';
 import MessageArea from './MessageArea';
 import MessageInput from './MessageInput';
-import type { ActiveChat, Message } from '../../../types';
+import type { ActiveChat, Message, Chat } // Adicionado Chat
+from '../../../types';
 
 interface ChatWindowProps {
   chat: ActiveChat;
   currentUserId: string;
   onSendMessage: (chatId: string, messageText: string) => void;
   messages: Message[];
-  onToggleArchiveStatus: (chatId: string) => void; // Nova prop
+  onToggleArchiveStatus: (chatId: string) => void;
+  onShowContactInfo: (chat: Chat) => void; // Nova prop
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -17,13 +19,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   currentUserId,
   onSendMessage,
   messages,
-  onToggleArchiveStatus // Recebendo a nova prop
+  onToggleArchiveStatus,
+  onShowContactInfo // Recebendo
 }) => {
   return (
     <div className="flex h-full flex-col">
       <ChatHeader
         chat={chat}
-        onToggleArchiveStatus={onToggleArchiveStatus} // Passando para ChatHeader
+        onToggleArchiveStatus={onToggleArchiveStatus}
+        onShowContactInfo={onShowContactInfo} // Passando para ChatHeader
       />
       <MessageArea messages={messages} currentUserId={currentUserId} />
       <MessageInput chatId={chat.id} onSendMessage={onSendMessage} />
