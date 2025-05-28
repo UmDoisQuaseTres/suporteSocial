@@ -28,6 +28,7 @@ export interface User {
     unreadCount?: number;
     lastActivity: number; // Timestamp da última atividade para ordenação
     participants?: User[]; // Para grupos
+    isArchived?: boolean;
   }
   
   export interface ActiveChat extends Chat {
