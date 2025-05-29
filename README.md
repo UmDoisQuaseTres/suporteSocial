@@ -58,9 +58,12 @@ O projeto replica diversas características da interface do WhatsApp, incluindo:
     * Lista de participantes do grupo (`ParticipantList` e `ParticipantListItem`), indicando administradores. [cite: suportesocial-master/src/components/ContactInfoPanel/ParticipantList.tsx, suportesocial-master/src/components/ContactInfoPanel/ParticipantListItem.tsx]
 
 * **Gerenciamento de Estado e Lógica:**
-    * Hooks customizados:
-        * `useChatManagement`: Gerencia toda a lógica de chats, mensagens, seleção de chat, envio de mensagens, arquivamento, bloqueio, exclusão, etc., utilizando dados mocados. [cite: suportesocial-master/src/hooks/useChatManagement.ts, suportesocial-master/src/mockData.ts]
-        * `useAppView`: Controla a visibilidade dos diferentes painéis e visualizações (arquivadas, nova conversa, painel de informações). [cite: suportesocial-master/src/hooks/useAppView.ts]
+    * Zustand Store:
+        * Gerencia todo o estado da aplicação de forma centralizada
+        * Mantém estado dos chats, mensagens, seleção de chat ativo
+        * Controla estados de UI como visualizações e painéis
+        * Implementa todas as ações (envio de mensagens, arquivamento, bloqueio, etc.)
+        * Utiliza dados mocados para simular backend
     * Tipos de dados definidos em `src/types/index.ts`. [cite: suportesocial-master/src/types/index.ts]
 
 * **Componentes Comuns e Utilitários:**

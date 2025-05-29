@@ -5,24 +5,17 @@ import MainContent from './components/MainContent/MainContent';
 import ContactInfoPanel from './components/ContactInfoPanel/ContactInfoPanel';
 import StarredMessagesView from './components/Sidebar/StarredMessagesView';
 import MediaGalleryView from './components/MainContent/MediaGalleryView';
-import type { Chat, User, ActiveChat, Message } from './types';
-import { useChatManagement } from './hooks/useChatManagement';
-import { useAppView } from './hooks/useAppView';
+import type { Chat, Message } from './types';
+import useStore, {
+  useActiveChat,
+  useCurrentUserId,
+  useFilteredChats,
+  useChatViewState
+} from './store/useStore';
 
 function App() {
   const {
-    allChats,
-    activeChat,
-    setActiveChat,
-    currentUserId,
-    messages,
-    viewingContactInfoFor,
-    setViewingContactInfoFor,
-    isCreatingGroup,
-    activeUserChats,
-    archivedUserChats,
-    unreadInArchivedCount,
-    availableContacts,
+    // Actions
     handleSelectChat,
     handleSendMessage,
     toggleArchiveChatStatus,
@@ -34,75 +27,101 @@ function App() {
     handleCreateGroup,
     handleClearChatMessages,
     handleForwardMessage,
-    handleToggleStarMessage
-  } = useChatManagement();
-
-  const {
-    showArchivedView,
-    setShowArchivedView,
-    searchTerm,
+    handleToggleStarMessage,
+    
+    // State getters
+    allChats,
+    messages,
+    viewingContactInfoFor,
+    setViewingContactInfoFor,
+    isCreatingGroup,
+    
+    // UI Actions
     setSearchTerm,
-    showNewChatView,
-    setShowNewChatView,
-    showContactInfoPanel,
     setShowContactInfoPanel,
-    showCreateGroupView,
-    setShowCreateGroupView,
-    showStarredMessagesView,
-    showMediaGalleryView,
-    handleToggleArchivedView: handleToggleArchivedViewFromHook,
-    handleToggleNewChatView: handleToggleNewChatViewFromHook,
-    handleToggleCreateGroupView: handleToggleCreateGroupViewFromHook,
-    handleToggleStarredMessagesView: handleToggleStarredMessagesViewFromHook,
+    handleToggleArchivedView,
+    handleToggleNewChatView,
+    handleToggleCreateGroupView,
+    handleToggleStarredMessagesView,
     handleToggleMediaGalleryView,
-    currentFilteredChats,
-  } = useAppView(setActiveChat, activeUserChats, archivedUserChats);
+    
+    // Derived state
+    archivedUserChats,
+    unreadInArchivedCount,
+    availableContacts,
+  } = useStore(state => ({
+    // Actions
+    handleSelectChat: state.handleSelectChat,
+    handleSendMessage: state.handleSendMessage,
+    toggleArchiveChatStatus: state.toggleArchiveChatStatus,
+    toggleMuteChat: state.toggleMuteChat,
+    handleToggleBlockChat: state.handleToggleBlockChat,
+    handleDeleteChat: state.handleDeleteChat,
+    handleExitGroup: state.handleExitGroup,
+    handleStartNewChat: state.handleStartNewChat,
+    handleCreateGroup: state.handleCreateGroup,
+    handleClearChatMessages: state.handleClearChatMessages,
+    handleForwardMessage: state.handleForwardMessage,
+    handleToggleStarMessage: state.handleToggleStarMessage,
+    
+    // State getters
+    allChats: state.allChats,
+    messages: state.messages,
+    viewingContactInfoFor: state.viewingContactInfoFor,
+    setViewingContactInfoFor: state.setViewingContactInfoFor,
+    isCreatingGroup: state.isCreatingGroup,
+    
+    // UI Actions
+    setSearchTerm: state.setSearchTerm,
+    setShowContactInfoPanel: state.setShowContactInfoPanel,
+    handleToggleArchivedView: state.handleToggleArchivedView,
+    handleToggleNewChatView: state.handleToggleNewChatView,
+    handleToggleCreateGroupView: state.handleToggleCreateGroupView,
+    handleToggleStarredMessagesView: state.handleToggleStarredMessagesView,
+    handleToggleMediaGalleryView: state.handleToggleMediaGalleryView,
+    
+    // Derived state
+    archivedUserChats: state.archivedUserChats(),
+    unreadInArchivedCount: state.unreadInArchivedCount(),
+    availableContacts: state.availableContacts(),
+  }));
+
+  // Use optimized selectors for frequently changing state
+  const activeChat = useActiveChat();
+  const currentUserId = useCurrentUserId();
+  const currentFilteredChats = useFilteredChats();
+  const viewState = useChatViewState();
 
   const [messageToHighlightId, setMessageToHighlightId] = useState<string | null>(null);
 
+  // Simplified handlers, as toggle actions are now in the store
   const handleShowMediaGallery = (chat: Chat) => {
     setViewingContactInfoFor(chat);
-    setShowContactInfoPanel(true);
-    handleToggleMediaGalleryView();
+    setShowContactInfoPanel(true); // Maintain direct control if needed, or integrate into store action
+    handleToggleMediaGalleryView(); // This now calls the store action
   };
 
   const handleCloseMediaGallery = () => {
-    handleToggleMediaGalleryView();
+    handleToggleMediaGalleryView(); // Calls store action
   };
 
   const handleShowContactInfo = (chat: Chat) => { 
     setViewingContactInfoFor(chat);
     setShowContactInfoPanel(true);
-    if (showMediaGalleryView) handleToggleMediaGalleryView(); 
+    if (viewState.showMediaGalleryView) handleToggleMediaGalleryView(); // Call store action
   };
 
   const handleCloseContactInfoPanel = () => { 
-    setShowContactInfoPanel(false);
+    setShowContactInfoPanel(false); // Can remain direct or become a store action
   }; 
 
-  const handleToggleArchivedView = () => {
-    handleToggleArchivedViewFromHook();
-  };
-
-  const handleToggleNewChatView = () => {
-    handleToggleNewChatViewFromHook();
-  };
-
-  const handleToggleCreateGroupView = () => {
-    handleToggleCreateGroupViewFromHook();
-  };
-
-  const handleToggleStarredMessagesView = () => {
-    handleToggleStarredMessagesViewFromHook();
-  };
-
   const handleNavigateToChat = (chat: Chat, messageId?: string) => {
-    handleSelectChat(chat, showArchivedView, setShowContactInfoPanel, setShowNewChatView);
-    if (showStarredMessagesView) {
-      handleToggleStarredMessagesView();
+    handleSelectChat(chat); // Store action updated, no longer needs UI setters
+    if (viewState.showStarredMessagesView) {
+      handleToggleStarredMessagesView(); // Store action
     }
-    if (showMediaGalleryView) {
-        handleToggleMediaGalleryView();
+    if (viewState.showMediaGalleryView) {
+        handleToggleMediaGalleryView(); // Store action
     }
     if (messageId) {
       setMessageToHighlightId(messageId);
@@ -112,21 +131,21 @@ function App() {
   const activeChatRef = useRef(activeChat);
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
-  const isFullScreenViewActive = showStarredMessagesView || showMediaGalleryView;
-  const sidebarLayoutWidth = isFullScreenViewActive ? "w-full" : (showContactInfoPanel ? "md:w-1/4" : "md:w-1/3");
-  const mainContentLayoutWidth = isFullScreenViewActive ? "hidden" : (showContactInfoPanel ? "md:w-2/4" : "md:w-2/3");
+  const isFullScreenViewActive = viewState.showStarredMessagesView || viewState.showMediaGalleryView;
+  const sidebarLayoutWidth = isFullScreenViewActive ? "w-full" : (viewState.showContactInfoPanel ? "md:w-1/4" : "md:w-1/3");
+  const mainContentLayoutWidth = isFullScreenViewActive ? "hidden" : (viewState.showContactInfoPanel ? "md:w-2/4" : "md:w-2/3");
   const contactInfoPanelLayoutWidth = isFullScreenViewActive ? "hidden" : "w-full md:w-1/4";
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-whatsapp-chat-bg">
       <div className="flex h-full w-full overflow-hidden shadow-2xl md:h-screen md:w-full md:max-w-none md:rounded-none">
-        {showMediaGalleryView && viewingContactInfoFor ? (
+        {viewState.showMediaGalleryView && viewingContactInfoFor ? (
            <MediaGalleryView 
             chatInfo={viewingContactInfoFor} 
             chatMessages={messages[viewingContactInfoFor.id] || []} 
             onClose={handleCloseMediaGallery} 
           />
-        ) : showStarredMessagesView ? (
+        ) : viewState.showStarredMessagesView ? (
           <StarredMessagesView 
             allMessages={messages}
             allChats={allChats}
@@ -139,20 +158,22 @@ function App() {
           <Sidebar
             sidebarWidthClass={sidebarLayoutWidth}
             unreadInArchivedCount={unreadInArchivedCount}
-            onSelectChat={(chat) => handleSelectChat(chat, showArchivedView, setShowContactInfoPanel, setShowNewChatView)} 
+            onSelectChat={handleSelectChat}
             activeChatId={activeChat?.id}
-            onToggleArchivedView={handleToggleArchivedView} 
-            showArchived={showArchivedView}
+            onToggleArchivedView={handleToggleArchivedView}
+            showArchived={viewState.showArchivedView}
             currentDisplayedChats={currentFilteredChats}
-            searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
-            showNewChatView={showNewChatView} onToggleNewChatView={handleToggleNewChatView}
-            showCreateGroupView={showCreateGroupView}
+            searchTerm={viewState.searchTerm}
+            onSearchTermChange={setSearchTerm}
+            showNewChatView={viewState.showNewChatView}
+            onToggleNewChatView={handleToggleNewChatView}
+            showCreateGroupView={viewState.showCreateGroupView}
             onToggleCreateGroupView={handleToggleCreateGroupView}
-            availableContacts={availableContacts} 
-            onStartNewChat={(contact) => handleStartNewChat(contact, setShowNewChatView, setShowContactInfoPanel)}
-            onToggleArchiveChatStatus={(chatId) => toggleArchiveChatStatus(chatId, showArchivedView, setShowArchivedView)} 
+            availableContacts={availableContacts}
+            onStartNewChat={handleStartNewChat}
+            onToggleArchiveChatStatus={toggleArchiveChatStatus}
             totalArchivedChats={archivedUserChats.length}
-            onCreateGroup={(groupName, selectedIds) => handleCreateGroup(groupName, selectedIds, setShowCreateGroupView, setActiveChat)}
+            onCreateGroup={handleCreateGroup}
             currentUserId={currentUserId}
             onShowStarredMessages={handleToggleStarredMessagesView}
             isCreatingGroup={isCreatingGroup}
@@ -162,11 +183,11 @@ function App() {
             <MainContent
               mainContentWidthClass={mainContentLayoutWidth}
               activeChat={activeChat} currentUserId={currentUserId}
-              onSendMessage={(chatId, messageText) => handleSendMessage(chatId, messageText, showArchivedView, setShowArchivedView)}
-              onToggleArchiveStatus={(chatId) => toggleArchiveChatStatus(chatId, showArchivedView, setShowArchivedView)} 
+              onSendMessage={handleSendMessage} // Store action
+              onToggleArchiveStatus={toggleArchiveChatStatus} // Store action
               onShowContactInfo={handleShowContactInfo}
               onClearChatMessages={handleClearChatMessages}
-              onDeleteChat={(chatId) => handleDeleteChat(chatId, showArchivedView, setShowArchivedView)}
+              onDeleteChat={handleDeleteChat} // Store action
               allChats={allChats}
               onForwardMessage={handleForwardMessage}
               onToggleStarMessage={handleToggleStarMessage}
@@ -174,7 +195,7 @@ function App() {
               clearMessageToHighlight={() => setMessageToHighlightId(null)}
             />
         )}
-        {showContactInfoPanel && viewingContactInfoFor && !isFullScreenViewActive && (
+        {viewState.showContactInfoPanel && viewingContactInfoFor && !isFullScreenViewActive && (
           <ContactInfoPanel
             chatInfo={viewingContactInfoFor}
             chatMessages={messages[viewingContactInfoFor.id] || []}
@@ -183,10 +204,10 @@ function App() {
             currentUserId={currentUserId}
             onToggleMuteChat={toggleMuteChat}
             onToggleBlockChat={handleToggleBlockChat}
-            onDeleteChat={(chatId) => handleDeleteChat(chatId, showArchivedView, setShowArchivedView)} 
-            onExitGroup={(chatId) => handleExitGroup(chatId, showArchivedView, setShowArchivedView)} 
+            onDeleteChat={handleDeleteChat} // Store action
+            onExitGroup={handleExitGroup} // Store action
             onShowMediaGallery={handleShowMediaGallery}
-            onShowStarredMessages={handleToggleStarredMessagesView}
+            onShowStarredMessages={handleToggleStarredMessagesView} // Store action
           />
         )}
       </div>
