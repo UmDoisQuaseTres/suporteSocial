@@ -33,6 +33,7 @@ export interface User {
     lastActivity: number; // Timestamp da última atividade para ordenação
     participants?: User[]; // Para grupos
     isArchived?: boolean;
+    isMuted?: boolean;
   }
   
   export interface ActiveChat extends Chat {
