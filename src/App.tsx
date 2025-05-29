@@ -4,7 +4,6 @@ import Sidebar from './components/Sidebar/Sidebar';
 import MainContent from './components/MainContent/MainContent';
 import ContactInfoPanel from './components/ContactInfoPanel/ContactInfoPanel';
 import type { Chat, User } from './types';
-import { mockUsers } from './mockData';
 import { useChatManagement } from './hooks/useChatManagement';
 import { useAppView } from './hooks/useAppView';
 
@@ -16,6 +15,10 @@ function App() {
     currentUserId,
     viewingContactInfoFor,
     setViewingContactInfoFor,
+    activeUserChats,
+    archivedUserChats,
+    unreadInArchivedCount,
+    availableContacts,
     handleSelectChat,
     handleSendMessage,
     toggleArchiveChatStatus,
@@ -37,12 +40,8 @@ function App() {
     setShowContactInfoPanel,
     handleToggleArchivedView: handleToggleArchivedViewFromHook,
     handleToggleNewChatView: handleToggleNewChatViewFromHook,
-  } = useAppView();
-
-  const availableContacts: User[] = Object.values(mockUsers).filter(user => user.id !== currentUserId);
-  const activeUserChats = allChats.filter(chat => !chat.isArchived);
-  const archivedUserChats = allChats.filter(chat => chat.isArchived);
-  const unreadInArchivedCount = archivedUserChats.filter(chat => (chat.unreadCount || 0) > 0).length;
+    currentFilteredChats,
+  } = useAppView(setActiveChat, activeUserChats, archivedUserChats);
 
   const handleShowContactInfo = (chat: Chat) => { 
     setViewingContactInfoFor(chat);
@@ -55,19 +54,15 @@ function App() {
 
   const handleToggleArchivedView = () => {
     handleToggleArchivedViewFromHook();
-    setActiveChat(null);
   };
 
   const handleToggleNewChatView = () => {
     handleToggleNewChatViewFromHook();
-    setActiveChat(null);
   };
 
   const activeChatRef = useRef(activeChat);
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
-  const listToDisplayInitially = showArchivedView ? archivedUserChats : (showNewChatView ? [] : activeUserChats);
-  const currentFilteredChats = searchTerm && !showNewChatView ? listToDisplayInitially.filter(chat => chat.name.toLowerCase().includes(searchTerm.toLowerCase())) : listToDisplayInitially;
   const sidebarWidth = showContactInfoPanel ? "md:w-1/4" : "md:w-1/3";
   const mainContentWidth = showContactInfoPanel ? "md:w-2/4" : "md:w-2/3";
 
