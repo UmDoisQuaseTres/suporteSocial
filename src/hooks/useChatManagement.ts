@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Chat, ActiveChat, Message, User } from '../types';
 import { mockUsers, initialMockChats, initialMockMessages } from '../mockData';
 
@@ -8,6 +8,18 @@ export const useChatManagement = () => {
   const [messages, setMessages] = useState<{ [chatId: string]: Message[] }>(initialMockMessages);
   const [currentUserId] = useState<string>('currentUser');
   const [viewingContactInfoFor, setViewingContactInfoFor] = useState<Chat | null>(null);
+
+  // Derived state for chat lists and counts
+  const activeUserChats = useMemo(() => allChats.filter(chat => !chat.isArchived), [allChats]);
+  const archivedUserChats = useMemo(() => allChats.filter(chat => chat.isArchived), [allChats]);
+  const unreadInArchivedCount = useMemo(() => 
+    archivedUserChats.filter(chat => (chat.unreadCount || 0) > 0).length
+  , [archivedUserChats]);
+
+  // Derived state for available contacts
+  const availableContacts = useMemo(() => 
+    Object.values(mockUsers).filter(user => user.id !== currentUserId)
+  , [currentUserId]); // currentUserId is stable, but good practice to include dependency
 
   const handleCloseContactInfo = () => { 
     setViewingContactInfoFor(null); 
@@ -165,6 +177,10 @@ export const useChatManagement = () => {
     currentUserId,
     viewingContactInfoFor,
     setViewingContactInfoFor,
+    activeUserChats, // Export derived state
+    archivedUserChats, // Export derived state
+    unreadInArchivedCount, // Export derived state
+    availableContacts, // Export derived state
     handleSelectChat,
     handleSendMessage,
     toggleArchiveChatStatus,
