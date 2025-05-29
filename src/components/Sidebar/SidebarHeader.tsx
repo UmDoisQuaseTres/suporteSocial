@@ -1,8 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faUsers, faCircleNotch, faCommentDots, faEllipsisV } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faUsers, faCircleNotch, faCommentDots, faEllipsisV, faStar } from '@fortawesome/free-solid-svg-icons';
 import type { User } from '../../types'; // Assuming User type might be needed if mockUsersLocal evolves
 import Avatar from '../common/Avatar';
+import DropdownMenu from '../common/DropdownMenu';
 
 // mockUsersLocal is kept here as it's small and specific to default avatar
 const mockUsersLocal: { [id: string]: User } = {
@@ -12,11 +13,16 @@ const mockUsersLocal: { [id: string]: User } = {
 export interface SidebarHeaderProps {
   showArchived: boolean;
   showNewChatView: boolean;
+  showCreateGroupView: boolean;
   onToggleArchivedView: () => void;
   onToggleNewChatView: () => void;
+  onToggleCreateGroupView: () => void;
+  onInitiateNewChat?: () => void;
+  onInitiateCreateGroup?: () => void;
+  onShowStarredMessages?: () => void;
 }
 
-const SidebarHeader: React.FC<SidebarHeaderProps> = ({ showArchived, showNewChatView, onToggleArchivedView, onToggleNewChatView }) => {
+const SidebarHeader: React.FC<SidebarHeaderProps> = ({ showArchived, showNewChatView, showCreateGroupView, onToggleArchivedView, onToggleNewChatView, onToggleCreateGroupView, onInitiateNewChat, onInitiateCreateGroup, onShowStarredMessages }) => {
   let title = ""; 
   let onBackAction = () => {};
   
@@ -28,8 +34,12 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({ showArchived, showNewChat
     title = "Nova conversa"; 
     onBackAction = onToggleNewChatView; 
   }
+  else if (showCreateGroupView) {
+    title = "Novo grupo";
+    onBackAction = onToggleCreateGroupView;
+  }
 
-  if (showArchived || showNewChatView) {
+  if (showArchived || showNewChatView || showCreateGroupView) {
     return (
       <header className="flex h-[60px] items-center bg-whatsapp-header-bg p-3 text-whatsapp-text-primary">
         <button onClick={onBackAction} className="mr-6 text-xl text-whatsapp-icon hover:text-gray-200">
@@ -56,12 +66,21 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({ showArchived, showNewChat
           <button title="Status" className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
             <FontAwesomeIcon icon={faCircleNotch} />
           </button>
-          <button title="Nova conversa" onClick={onToggleNewChatView} className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
+          <button title="Nova conversa" onClick={onInitiateNewChat} className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
             <FontAwesomeIcon icon={faCommentDots} />
           </button>
-          <button title="Menu" className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
-            <FontAwesomeIcon icon={faEllipsisV} />
-          </button>
+          <DropdownMenu 
+            trigger={
+              <button title="Menu" className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
+                <FontAwesomeIcon icon={faEllipsisV} />
+              </button>
+            }
+            items={[
+              { id: 'new-group', label: 'Novo grupo', onClick: onInitiateCreateGroup || (() => console.log('Initiate new group clicked')) },
+              { id: 'starred-messages', label: 'Mensagens Marcadas', onClick: onShowStarredMessages || (() => console.log('Starred messages clicked')) },
+            ]}
+            menuPosition="right"
+          />
         </div>
       </header>
   );

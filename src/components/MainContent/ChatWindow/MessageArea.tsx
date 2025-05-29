@@ -5,10 +5,16 @@ import type { Message } from '../../../types';
 interface MessageAreaProps {
   messages: Message[];
   currentUserId: string; // Removido pois MessageBubble já usa message.type
+  onStartReply: (message: Message) => void;
+  onStartForward: (message: Message) => void;
+  onToggleStarMessage: (messageId: string) => void;
+  messageToHighlightId?: string | null;
+  clearMessageToHighlight?: () => void;
 }
 
-const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
+const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId, onStartReply, onStartForward, onToggleStarMessage, messageToHighlightId, clearMessageToHighlight }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const highlightedMessageRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -21,12 +27,21 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
   };
 
   useEffect(() => {
-    // Atrasar um pouco o scroll para dar tempo da UI renderizar, especialmente se houver muitas mensagens
-    const timer = setTimeout(() => {
-        scrollToBottom();
-    }, 100); // Pequeno delay
-    return () => clearTimeout(timer);
-  }, [messages]);
+    if (messageToHighlightId && highlightedMessageRef.current) {
+      highlightedMessageRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center' 
+      });
+      if (clearMessageToHighlight) {
+        clearMessageToHighlight();
+      }
+    } else if (!messageToHighlightId) {
+      const timer = setTimeout(() => {
+          scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, messageToHighlightId, clearMessageToHighlight]);
 
   const groupedMessages: { [date: string]: Message[] } = (messages || []).reduce((acc, msg) => { // Adicionado (messages || []) para segurança
     const dateKey = new Date(msg.timestamp).toLocaleDateString('pt-PT', {day: '2-digit', month: 'long', year: 'numeric'});
@@ -52,7 +67,19 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
           </div>
           {/* Passando currentUserId para MessageBubble se ele ainda precisar */}
           {msgsInDate.map((message) => (
-            <MessageBubble key={message.id} message={message} /* currentUserId={currentUserId} */ />
+            <div 
+              key={message.id} 
+              id={`message-${message.id}`}
+              ref={message.id === messageToHighlightId ? highlightedMessageRef : null}
+            >
+              <MessageBubble 
+                message={message} 
+                onStartReply={onStartReply}
+                onStartForward={onStartForward}
+                onToggleStarMessage={onToggleStarMessage}
+                isHighlighted={message.id === messageToHighlightId}
+              />
+            </div>
           ))}
         </React.Fragment>
       ))}

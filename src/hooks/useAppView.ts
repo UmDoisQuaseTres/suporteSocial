@@ -13,10 +13,14 @@ export const useAppView = (
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showNewChatView, setShowNewChatView] = useState<boolean>(false);
   const [showContactInfoPanel, setShowContactInfoPanel] = useState<boolean>(false);
+  const [showCreateGroupView, setShowCreateGroupView] = useState<boolean>(false);
+  const [showStarredMessagesView, setShowStarredMessagesView] = useState<boolean>(false);
 
   const handleToggleArchivedView = () => { 
     setShowArchivedView(prev => !prev); 
     setShowNewChatView(false); 
+    setShowCreateGroupView(false);
+    setShowStarredMessagesView(false);
     setSearchTerm(''); 
     setShowContactInfoPanel(false); 
     if (setActiveChatHook) {
@@ -27,8 +31,34 @@ export const useAppView = (
   const handleToggleNewChatView = () => {
     setShowNewChatView(prev => !prev); 
     setShowArchivedView(false); 
+    setShowCreateGroupView(false);
+    setShowStarredMessagesView(false);
     setSearchTerm(''); 
     setShowContactInfoPanel(false); 
+    if (setActiveChatHook) {
+      setActiveChatHook(null);
+    }
+  };
+
+  const handleToggleCreateGroupView = () => {
+    setShowCreateGroupView(prev => !prev);
+    setShowNewChatView(false);
+    setShowArchivedView(false);
+    setShowStarredMessagesView(false);
+    setSearchTerm('');
+    setShowContactInfoPanel(false);
+    if (setActiveChatHook) {
+      setActiveChatHook(null);
+    }
+  };
+
+  const handleToggleStarredMessagesView = () => {
+    setShowStarredMessagesView(prev => !prev);
+    setShowArchivedView(false);
+    setShowNewChatView(false);
+    setShowCreateGroupView(false);
+    setSearchTerm('');
+    setShowContactInfoPanel(false);
     if (setActiveChatHook) {
       setActiveChatHook(null);
     }
@@ -48,17 +78,19 @@ export const useAppView = (
   const listToDisplayInitially = useMemo(() => {
     if (showArchivedView) return archivedUserChats || [];
     if (showNewChatView) return []; // New chat view doesn't show existing chats initially
+    if (showCreateGroupView) return []; // Create group view also doesn't show existing chats
+    if (showStarredMessagesView) return []; // Starred messages view will have its own data source
     return activeUserChats || [];
-  }, [showArchivedView, showNewChatView, activeUserChats, archivedUserChats]);
+  }, [showArchivedView, showNewChatView, showCreateGroupView, showStarredMessagesView, activeUserChats, archivedUserChats]);
 
   const currentFilteredChats = useMemo(() => {
-    if (searchTerm && !showNewChatView) {
+    if (searchTerm && !showNewChatView && !showCreateGroupView && !showStarredMessagesView) {
       return listToDisplayInitially.filter(chat => 
         chat.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     return listToDisplayInitially;
-  }, [searchTerm, showNewChatView, listToDisplayInitially]);
+  }, [searchTerm, showNewChatView, showCreateGroupView, showStarredMessagesView, listToDisplayInitially]);
 
   return {
     showArchivedView,
@@ -69,8 +101,13 @@ export const useAppView = (
     setShowNewChatView,
     showContactInfoPanel,
     setShowContactInfoPanel,
+    showCreateGroupView,
+    setShowCreateGroupView,
+    showStarredMessagesView,
     handleToggleArchivedView,
     handleToggleNewChatView,
+    handleToggleCreateGroupView,
+    handleToggleStarredMessagesView,
     currentFilteredChats,
     // handleShowContactInfo, // Keep in App.tsx for coordination or pass setters
     // handleCloseContactInfoPanel, // Keep in App.tsx for coordination or pass setters

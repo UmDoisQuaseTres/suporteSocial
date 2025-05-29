@@ -66,7 +66,9 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           />
           <h2 className="mt-3 text-xl font-semibold text-whatsapp-text-primary break-all">{chatInfo.name}</h2>
           {isGroup ? (
-            <p className="text-sm text-whatsapp-text-secondary">{chatInfo.participants?.length || 0} participantes</p>
+            <p className="text-sm text-whatsapp-text-secondary">
+              {chatInfo.participants?.length || 0} participante{ (chatInfo.participants?.length || 0) !== 1 ? 's' : ''}
+            </p>
           ) : (
             <p className="mt-1 text-sm text-whatsapp-text-primary">
               {contactUser?.id ? `~${contactUser.id}` : `ID: ${chatInfo.id}`}
@@ -124,7 +126,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             <hr className="mx-0 border-gray-700/10" />
             <section className="px-1 py-3">
               <h3 className="mb-1 px-5 text-sm font-normal text-whatsapp-text-secondary">
-                {chatInfo.participants.length} Participante{chatInfo.participants.length === 1 ? '' : 's'}
+                {chatInfo.participants.length} Participante{chatInfo.participants.length !== 1 ? 's' : ''}
               </h3>
               <div className="max-h-60 overflow-y-auto chat-scrollbar">
                 {chatInfo.participants.map(participant => (
@@ -168,6 +170,12 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               onClick={handleBlockToggle}
             />
           )}
+          <InfoPanelMenuItem
+            icon={faUserShield}
+            text={isGroup ? "Reportar grupo" : "Reportar contacto"}
+            colorClass="text-red-500"
+            onClick={() => console.log(`Reportar: ${chatInfo.id} (${chatInfo.name})`)}
+          />
           <InfoPanelMenuItem
             icon={faTrashAlt}
             text={`Apagar conversa`}

@@ -24,6 +24,11 @@ export interface User {
     status?: MessageStatus; // Apenas para mensagens enviadas pelo usuário atual
     type: 'incoming' | 'outgoing'; // Facilita a renderização
     userName?: string; // Para mensagens de grupo recebidas
+    replyToMessageId?: string; // ID of the message being replied to
+    replyToMessagePreview?: string; // A short text preview of the replied message
+    replyToSenderName?: string; // Name of the sender of the message being replied to
+    isForwarded?: boolean; // Indicates if the message is forwarded
+    isStarred?: boolean; // Indicates if the message is starred
   }
   
   export interface Chat {

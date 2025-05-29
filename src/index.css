@@ -57,3 +57,13 @@ body {
 .range-sm.range-thumb-incoming::-moz-range-thumb {
   background-color: #FFFFFF;
 }
+
+/* Highlight animation for scrolled-to message */
+@keyframes fadeOutHighlight {
+  from { background-color: rgba(250, 204, 21, 0.3); /* Tailwind yellow-400 at 30% opacity */ }
+  to { background-color: transparent; }
+}
+
+.message-highlighted > div { /* Target the inner bubble div */
+  animation: fadeOutHighlight 2s ease-out forwards;
+}
