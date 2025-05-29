@@ -3,9 +3,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCheck, faCheckDouble, faClock,
   faImage, faMicrophone, faVideo, faFileAlt,
-  faArchive, faArrowUpFromBracket // Ícones para arquivar/desarquivar
+  faArchive, faArrowUpFromBracket,
+  faBellSlash // Ícone para chat silenciado
 } from '@fortawesome/free-solid-svg-icons';
-import type { Chat, MessageStatus } from '../../types';
+import type { Chat, MessageStatus } from '../../types'; //
 
 interface ChatListItemProps {
   chat: Chat;
@@ -67,7 +68,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
   const activeBgClass = isActive ? 'bg-whatsapp-active-chat' : '';
 
   const handleArchiveButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Impede que o clique selecione o chat
+    e.stopPropagation();
     onToggleArchiveChatStatus(chat.id);
   };
 
@@ -81,32 +82,40 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
       <img
         src={chat.avatarUrl || 'https://placehold.co/50x50/CCCCCC/000000?text=?'}
         alt={`${chat.name} Avatar`}
-        className="mr-3 h-12 w-12 flex-shrink-0 rounded-full" // Adicionado flex-shrink-0
+        className="mr-3 h-12 w-12 flex-shrink-0 rounded-full"
         onError={(e) => (e.currentTarget.src = 'https://placehold.co/50x50/CCCCCC/000000?text=?')}
       />
-      {/* Container do conteúdo principal que terá padding ajustado no hover */}
-      <div className={`min-w-0 flex-1 ${isHovered ? 'pr-10' : ''}`}> {/* Adiciona pr-10 quando hovered */}
+      <div className={`min-w-0 flex-1 ${isHovered ? 'pr-10' : ''}`}>
         <div className="flex items-center justify-between">
           <h3 className="truncate text-base font-medium text-whatsapp-text-primary">{chat.name}</h3>
-          <span className={`ml-2 flex-shrink-0 text-xs ${chat.unreadCount && chat.unreadCount > 0 ? 'font-semibold text-whatsapp-light-green' : 'text-whatsapp-text-secondary'}`}>
+          <span className={`ml-2 flex-shrink-0 text-xs ${chat.unreadCount && chat.unreadCount > 0 && !chat.isMuted ? 'font-semibold text-whatsapp-light-green' : 'text-whatsapp-text-secondary'}`}>
+            {/* Ocultar timestamp se o botão de arquivar estiver visível E não houver não lidas E não estiver silenciado. (Lógica complexa, simplificar se necessário) */}
+            {/* A lógica anterior de ocultar o timestamp quando isHovered era complexa demais. Vamos mantê-lo visível. */}
             {formatTimestamp(chat.lastMessage?.timestamp)}
           </span>
         </div>
         <div className="flex items-center justify-between pt-0.5">
           {getLastMessagePreview(chat)}
-          {chat.unreadCount && chat.unreadCount > 0 && (
-            <span className="ml-2 flex h-5 min-w-[1.25rem] flex-shrink-0 items-center justify-center rounded-full bg-whatsapp-light-green px-1 text-xs font-semibold text-white">
-              {chat.unreadCount}
-            </span>
-          )}
+          {/* Container para ícones da direita (mute e unread count) */}
+          <div className="ml-2 flex flex-shrink-0 items-center space-x-2">
+            {chat.isMuted && (
+              <FontAwesomeIcon icon={faBellSlash} className="text-sm text-whatsapp-text-secondary" title="Silenciada"/>
+            )}
+            {chat.unreadCount && chat.unreadCount > 0 && (
+              <span
+                className={`flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-xs font-semibold text-white
+                            ${chat.isMuted ? 'bg-whatsapp-text-secondary' : 'bg-whatsapp-light-green'}`}
+              >
+                {chat.unreadCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Botão de Arquivar/Desarquivar que aparece no hover */}
       {isHovered && (
         <button
           onClick={handleArchiveButtonClick}
-          // Ajustado padding e tamanho do texto, posicionado mais à direita
           className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full p-1.5 text-sm text-whatsapp-icon hover:bg-whatsapp-header-bg hover:text-whatsapp-text-primary"
           title={chat.isArchived ? "Desarquivar conversa" : "Arquivar conversa"}
         >

@@ -2,8 +2,7 @@ import React from 'react';
 import ChatHeader from './ChatHeader';
 import MessageArea from './MessageArea';
 import MessageInput from './MessageInput';
-import type { ActiveChat, Message, Chat } // Adicionado Chat
-from '../../../types';
+import type { ActiveChat, Message, Chat } from '../../../types';
 
 interface ChatWindowProps {
   chat: ActiveChat;
@@ -11,7 +10,7 @@ interface ChatWindowProps {
   onSendMessage: (chatId: string, messageText: string) => void;
   messages: Message[];
   onToggleArchiveStatus: (chatId: string) => void;
-  onShowContactInfo: (chat: Chat) => void; // Nova prop
+  onShowContactInfo: (chat: Chat) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -20,17 +19,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendMessage,
   messages,
   onToggleArchiveStatus,
-  onShowContactInfo // Recebendo
+  onShowContactInfo
 }) => {
   return (
     <div className="flex h-full flex-col">
       <ChatHeader
         chat={chat}
         onToggleArchiveStatus={onToggleArchiveStatus}
-        onShowContactInfo={onShowContactInfo} // Passando para ChatHeader
+        onShowContactInfo={onShowContactInfo}
       />
       <MessageArea messages={messages} currentUserId={currentUserId} />
-      <MessageInput chatId={chat.id} onSendMessage={onSendMessage} />
+      <MessageInput
+        chatId={chat.id}
+        onSendMessage={onSendMessage}
+        isChatBlocked={chat.type === 'user' ? chat.isBlocked : false} // Passa o estado de bloqueio
+        onOpenContactInfo={() => onShowContactInfo(chat)} // Passa a função para abrir o painel de info
+      />
     </div>
   );
 };
