@@ -67,3 +67,16 @@ body {
 .message-highlighted > div { /* Target the inner bubble div */
   animation: fadeOutHighlight 2s ease-out forwards;
 }
+
+/* Animation for recording indicator bars */
+@keyframes pulse-bar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1.0); }
+}
+
+.animate-pulse-bar {
+  animation-name: pulse-bar;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transform-origin: bottom;
+}

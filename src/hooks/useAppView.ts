@@ -15,53 +15,54 @@ export const useAppView = (
   const [showContactInfoPanel, setShowContactInfoPanel] = useState<boolean>(false);
   const [showCreateGroupView, setShowCreateGroupView] = useState<boolean>(false);
   const [showStarredMessagesView, setShowStarredMessagesView] = useState<boolean>(false);
+  const [showMediaGalleryView, setShowMediaGalleryView] = useState<boolean>(false); // New state
 
-  const handleToggleArchivedView = () => { 
-    setShowArchivedView(prev => !prev); 
-    setShowNewChatView(false); 
+  const resetAllSecondaryViews = () => {
+    setShowArchivedView(false);
+    setShowNewChatView(false);
     setShowCreateGroupView(false);
     setShowStarredMessagesView(false);
-    setSearchTerm(''); 
-    setShowContactInfoPanel(false); 
-    if (setActiveChatHook) {
-      setActiveChatHook(null);
-    }
+    setShowMediaGalleryView(false); // Reset media gallery view as well
+    // setShowContactInfoPanel(false); // Keep contact info panel independent for now, or reset if needed
+    setSearchTerm('');
+    // if (setActiveChatHook) { setActiveChatHook(null); } // Decide if active chat should be cleared
+  };
+
+  const handleToggleArchivedView = () => { 
+    const becomingVisible = !showArchivedView;
+    resetAllSecondaryViews();
+    setShowArchivedView(becomingVisible);
+    if (becomingVisible && setActiveChatHook) setActiveChatHook(null);
   };
 
   const handleToggleNewChatView = () => {
-    setShowNewChatView(prev => !prev); 
-    setShowArchivedView(false); 
-    setShowCreateGroupView(false);
-    setShowStarredMessagesView(false);
-    setSearchTerm(''); 
-    setShowContactInfoPanel(false); 
-    if (setActiveChatHook) {
-      setActiveChatHook(null);
-    }
+    const becomingVisible = !showNewChatView;
+    resetAllSecondaryViews();
+    setShowNewChatView(becomingVisible);
+    if (becomingVisible && setActiveChatHook) setActiveChatHook(null);
   };
 
   const handleToggleCreateGroupView = () => {
-    setShowCreateGroupView(prev => !prev);
-    setShowNewChatView(false);
-    setShowArchivedView(false);
-    setShowStarredMessagesView(false);
-    setSearchTerm('');
-    setShowContactInfoPanel(false);
-    if (setActiveChatHook) {
-      setActiveChatHook(null);
-    }
+    const becomingVisible = !showCreateGroupView;
+    resetAllSecondaryViews();
+    setShowCreateGroupView(becomingVisible);
+    if (becomingVisible && setActiveChatHook) setActiveChatHook(null);
   };
 
   const handleToggleStarredMessagesView = () => {
-    setShowStarredMessagesView(prev => !prev);
-    setShowArchivedView(false);
-    setShowNewChatView(false);
-    setShowCreateGroupView(false);
-    setSearchTerm('');
-    setShowContactInfoPanel(false);
-    if (setActiveChatHook) {
-      setActiveChatHook(null);
-    }
+    const becomingVisible = !showStarredMessagesView;
+    resetAllSecondaryViews();
+    setShowStarredMessagesView(becomingVisible);
+    if (becomingVisible && setActiveChatHook) setActiveChatHook(null);
+  };
+
+  const handleToggleMediaGalleryView = () => { // New handler
+    const becomingVisible = !showMediaGalleryView;
+    resetAllSecondaryViews(); // This will close other full-sidebar views
+    setShowMediaGalleryView(becomingVisible);
+    // Decide if active chat should be cleared or if ContactInfoPanel should be hidden
+    // For MediaGallery, it makes sense to keep the active chat context and contact info panel if it was open.
+    // So, don't clear activeChatHook here, and setShowContactInfoPanel(false) is not called in resetAllSecondaryViews for it.
   };
 
   // handleShowContactInfo and handleCloseContactInfoPanel might need to interact with 
@@ -80,17 +81,18 @@ export const useAppView = (
     if (showNewChatView) return []; // New chat view doesn't show existing chats initially
     if (showCreateGroupView) return []; // Create group view also doesn't show existing chats
     if (showStarredMessagesView) return []; // Starred messages view will have its own data source
+    if (showMediaGalleryView) return []; // Media gallery view doesn't use this list directly
     return activeUserChats || [];
-  }, [showArchivedView, showNewChatView, showCreateGroupView, showStarredMessagesView, activeUserChats, archivedUserChats]);
+  }, [showArchivedView, showNewChatView, showCreateGroupView, showStarredMessagesView, showMediaGalleryView, activeUserChats, archivedUserChats]);
 
   const currentFilteredChats = useMemo(() => {
-    if (searchTerm && !showNewChatView && !showCreateGroupView && !showStarredMessagesView) {
+    if (searchTerm && !showNewChatView && !showCreateGroupView && !showStarredMessagesView && !showMediaGalleryView) {
       return listToDisplayInitially.filter(chat => 
         chat.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     return listToDisplayInitially;
-  }, [searchTerm, showNewChatView, showCreateGroupView, showStarredMessagesView, listToDisplayInitially]);
+  }, [searchTerm, showNewChatView, showCreateGroupView, showStarredMessagesView, showMediaGalleryView, listToDisplayInitially]);
 
   return {
     showArchivedView,
@@ -104,10 +106,14 @@ export const useAppView = (
     showCreateGroupView,
     setShowCreateGroupView,
     showStarredMessagesView,
+    setShowStarredMessagesView, // Export setter for direct control if needed
+    showMediaGalleryView, // Export new state
+    setShowMediaGalleryView, // Export new setter
     handleToggleArchivedView,
     handleToggleNewChatView,
     handleToggleCreateGroupView,
     handleToggleStarredMessagesView,
+    handleToggleMediaGalleryView, // Export new handler
     currentFilteredChats,
     // handleShowContactInfo, // Keep in App.tsx for coordination or pass setters
     // handleCloseContactInfoPanel, // Keep in App.tsx for coordination or pass setters

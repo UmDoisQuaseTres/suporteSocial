@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUsers, faUserPlus, faAddressBook } from '@fortawesome/free-solid-svg-icons';
 import type { User } from '../../types';
 import ContactListItem from './ContactListItem'; // Import the extracted component
 
@@ -56,9 +56,20 @@ const NewChatView: React.FC<NewChatViewProps> = ({
             <ContactListItem key={contact.id} contact={contact} onSelectContact={onSelectContact} />
           ))
         ) : (
-          <p className="p-4 text-center text-sm text-whatsapp-text-secondary">
-            {contactSearchTerm ? "Nenhum contacto encontrado." : "Nenhum contacto disponível."}
-          </p>
+          <div className="flex flex-col items-center justify-center h-full p-8 text-center text-whatsapp-text-secondary">
+            <FontAwesomeIcon 
+              icon={contactSearchTerm ? faSearch : faAddressBook} 
+              className="mb-4 text-4xl text-whatsapp-icon/50" 
+            />
+            <p className="text-sm">
+              {contactSearchTerm 
+                ? `Nenhum contacto encontrado para "${contactSearchTerm}".` 
+                : "Nenhum contacto disponível na sua lista."}
+            </p>
+            {!contactSearchTerm && (
+                <p className="text-xs mt-2">Adicione novos contactos ao seu dispositivo para vê-los aqui.</p>
+            )}
+          </div>
         )}
       </div>
     </div>

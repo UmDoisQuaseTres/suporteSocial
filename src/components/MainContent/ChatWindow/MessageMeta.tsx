@@ -7,23 +7,27 @@ interface MessageMetaProps {
   timestamp: number;
   status?: MessageStatus;
   isOutgoing: boolean;
-  hasTextContent: boolean; // To help with absolute positioning logic
+  // hasTextContent: boolean; // This prop is no longer needed
 }
 
-const MessageMeta: React.FC<MessageMetaProps> = ({ timestamp, status, isOutgoing, hasTextContent }) => {
-  const baseContainerClass = "mt-1 flex items-center";
+const MessageMeta: React.FC<MessageMetaProps> = ({ timestamp, status, isOutgoing }) => {
+  // The parent div in MessageBubble now handles the primary alignment (self-end).
+  // This component just needs to ensure its internal items (time, status icon) are aligned.
+  const baseContainerClass = "flex items-center"; 
   
-  // Determine positioning based on whether it's an outgoing message with text
-  const positioningClass = isOutgoing && hasTextContent 
-    ? 'absolute bottom-1.5 right-2.5' 
-    : (isOutgoing ? 'justify-end' : 'justify-end ml-auto');
+  // Simplified positioning: justify-end for outgoing, or rely on parent's self-end for incoming.
+  // For incoming, ml-auto on the status icon container (if used) or on time might be needed if they don't fill width.
+  // However, as MessageMeta is now placed in a self-end div in the bubble, this might be simpler.
+  const alignmentClass = isOutgoing ? 'justify-end' : 'justify-end'; // Both can use justify-end within their allocated space
 
   const timestampColorClass = isOutgoing 
     ? 'text-gray-300/70' 
     : 'text-whatsapp-text-secondary/80';
 
   return (
-    <div className={`${baseContainerClass} ${positioningClass}`}>
+    // The container for MessageMeta in MessageBubble is already using self-end.
+    // So, this inner div just needs to arrange time and status icon correctly.
+    <div className={`${baseContainerClass} ${alignmentClass}`}>
       <span className={`text-xs ${timestampColorClass}`}>
         {formatMessageTime(timestamp)}
       </span>

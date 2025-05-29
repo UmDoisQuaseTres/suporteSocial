@@ -11,6 +11,25 @@ import AttachmentMenuItem from './AttachmentMenuItem';
 import ReplyPreview from './ReplyPreview';
 import type { Message } from '../../../types'; // Ensure Message type is imported
 
+// Simple visual recording indicator
+const RecordingIndicator: React.FC = () => {
+  return (
+    <div className="flex items-center space-x-0.5 h-5">
+      {[12, 18, 14, 16, 10, 17].map((height, i) => (
+        <div
+          key={i}
+          className="w-0.5 bg-red-500 animate-pulse-bar"
+          style={{
+            height: `${height}px`,
+            animationDelay: `${i * 0.1}s`,
+            animationDuration: '0.8s'
+          }}
+        ></div>
+      ))}
+    </div>
+  );
+};
+
 interface MessageInputProps {
   chatId: string;
   onSendMessage: (chatId: string, messageContent: { 
@@ -436,9 +455,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onClick={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); }}
         />
         {isRecording ? (
-          <div className="flex flex-1 items-center text-sm text-whatsapp-text-secondary">
-              <FontAwesomeIcon icon={faMicrophone} className="mr-2 text-red-500 animate-pulse" />
-              Gravando... {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{ (recordingDuration % 60).toString().padStart(2, '0')}
+          <div className="flex flex-1 items-center space-x-3 text-sm text-whatsapp-text-secondary pl-2">
+              <RecordingIndicator />
+              <span className="text-red-500 font-medium">
+                {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
+              </span>
               <button 
                 title="Cancelar Gravação"
                 onClick={cancelRecording}

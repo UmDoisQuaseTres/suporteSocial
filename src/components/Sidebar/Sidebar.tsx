@@ -27,6 +27,7 @@ interface SidebarProps {
   onToggleCreateGroupView: () => void;
   onCreateGroup: (groupName: string, selectedContactIds: string[]) => void;
   currentUserId: string;
+  isCreatingGroup: boolean;
   onShowStarredMessages?: () => void;
 }
 
@@ -50,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleCreateGroupView,
   onCreateGroup,
   currentUserId,
+  isCreatingGroup,
   onShowStarredMessages
 }) => {
   const [contactSearchTerm, setContactSearchTerm] = useState<string>('');
@@ -93,6 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           currentUserId={currentUserId}
           onCreateGroup={onCreateGroup}
           onCancel={onToggleCreateGroupView}
+          isCreatingGroup={isCreatingGroup}
         />
       ) : (
         <>
@@ -115,6 +118,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               onSelectChat={onSelectChat}
               activeChatId={activeChatId}
               onToggleArchiveChatStatus={onToggleArchiveChatStatus}
+              searchTerm={searchTerm}
+              isArchivedView={showArchived}
             />
           </div>
         </>

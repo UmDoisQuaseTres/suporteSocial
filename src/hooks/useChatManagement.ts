@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import type { Chat, ActiveChat, Message, User } from '../types';
+import { useState, useMemo, useEffect } from 'react';
+import type { Chat, ActiveChat, Message, User, MessageStatus } from '../types';
 import { mockUsers, initialMockChats, initialMockMessages } from '../mockData';
 
 export const useChatManagement = () => {
@@ -8,6 +8,13 @@ export const useChatManagement = () => {
   const [messages, setMessages] = useState<{ [chatId: string]: Message[] }>(initialMockMessages);
   const [currentUserId] = useState<string>('currentUser');
   const [viewingContactInfoFor, setViewingContactInfoFor] = useState<Chat | null>(null);
+  const [isCreatingGroup, setIsCreatingGroup] = useState<boolean>(false);
+
+  useEffect(() => {
+    return () => {
+      setIsCreatingGroup(false);
+    };
+  }, []);
 
   // Derived state for chat lists and counts
   const activeUserChats = useMemo(() => allChats.filter(chat => !chat.isArchived), [allChats]);
@@ -94,7 +101,7 @@ export const useChatManagement = () => {
     }
 
     const newMessage: Message = {
-      id: `msg-${Date.now()}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       text: messageContent.text,
       imageUrl: messageContent.imageUrl,
       fileName: messageContent.fileName,
@@ -105,7 +112,7 @@ export const useChatManagement = () => {
       timestamp: Date.now(),
       senderId: currentUserId,
       type: 'outgoing',
-      status: 'sent',
+      status: 'pending',
       replyToMessageId: messageContent.replyToMessageId,
       replyToMessagePreview: messageContent.replyToMessagePreview,
       replyToSenderName: messageContent.replyToSenderName,
@@ -122,14 +129,45 @@ export const useChatManagement = () => {
         ).sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0))
     );
     if (chatWasArchived && currentShowArchivedView) {
-        setShowArchivedView(false); // UI concern, passed from App
+        setShowArchivedView(false);
     }
-    // setTimeout(() => { /* mock response */ }, 1500);
+
+    setTimeout(() => {
+      const updateMessageStatus = (chatIdToUpdate: string, messageIdToUpdate: string, newStatus: MessageStatus) => {
+        setMessages(prevMsgs => {
+          const chatMsgs = prevMsgs[chatIdToUpdate] || [];
+          return {
+            ...prevMsgs,
+            [chatIdToUpdate]: chatMsgs.map(msg => 
+              msg.id === messageIdToUpdate ? { ...msg, status: newStatus } : msg
+            )
+          };
+        });
+        setActiveChat(prevActive => {
+          if (prevActive && prevActive.id === chatIdToUpdate) {
+            return {
+              ...prevActive,
+              messages: prevActive.messages.map(msg => 
+                msg.id === messageIdToUpdate ? { ...msg, status: newStatus } : msg
+              )
+            };
+          }
+          return prevActive;
+        });
+        setAllChats(prevAll => prevAll.map(c => {
+          if (c.id === chatIdToUpdate && c.lastMessage?.id === messageIdToUpdate) {
+            return { ...c, lastMessage: { ...c.lastMessage, status: newStatus } };
+          }
+          return c;
+        }));
+      };
+      updateMessageStatus(chatId, newMessage.id, 'sent');
+    }, 1500);
   };
 
   const toggleArchiveChatStatus = (chatId: string, currentShowArchivedView: boolean, setShowArchivedView: React.Dispatch<React.SetStateAction<boolean>>) => {
     if (viewingContactInfoFor?.id === chatId) { 
-      handleCloseContactInfo(); // Uses hook's own setter for viewingContactInfoFor
+      handleCloseContactInfo();
     }
     let chatIsNowArchived = false;
     setAllChats(prev => 
@@ -139,13 +177,11 @@ export const useChatManagement = () => {
             c 
         ).sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0))
     );
-    if (activeChat?.id === chatId) setActiveChat(null); // Use hook's own setter
+    if (activeChat?.id === chatId) setActiveChat(null);
     
-    // This logic needs allChats, which might not be updated yet if setAllChats is async
-    // Consider deriving this in App.tsx or passing updated allChats state
     const stillHaveArchivedChatsAfterToggle = allChats.some(c => c.id !== chatId ? c.isArchived : chatIsNowArchived);
     if (currentShowArchivedView && !stillHaveArchivedChatsAfterToggle) {
-        setShowArchivedView(false); // UI concern, passed from App
+        setShowArchivedView(false);
     }
   };
 
@@ -184,14 +220,14 @@ export const useChatManagement = () => {
       return newMessages;
     });
     if (activeChat?.id === chatId) {
-      setActiveChat(null); // Use hook's own setter
+      setActiveChat(null);
     }
     if (viewingContactInfoFor?.id === chatId) {
-      handleCloseContactInfo(); // Use hook's own setter
+      handleCloseContactInfo();
     }
     const remainingArchived = chatsAfterDelete.filter(c => c.isArchived);
     if (currentShowArchivedView && remainingArchived.length === 0) {
-        setShowArchivedView(false); // UI concern, passed from App
+        setShowArchivedView(false);
     }
   };
 
@@ -204,7 +240,6 @@ export const useChatManagement = () => {
     contact: User, 
     setShowNewChatView: React.Dispatch<React.SetStateAction<boolean>>, 
     setShowContactInfoPanel: React.Dispatch<React.SetStateAction<boolean>>
-    // currentShowArchivedView is not directly used here for core logic, can be removed if only for handleSelectChat
  ) => {
     const existingChat = allChats.find(c => c.type === 'user' && c.participants?.some(p => p.id === contact.id));
     let chatToSelect: Chat;
@@ -222,20 +257,20 @@ export const useChatManagement = () => {
       setMessages(prev => ({ ...prev, [newChatId]: [] }));
       chatToSelect = newChatData;
     }
-    // Select the chat (either existing or new)
     const chatMessages = messages[chatToSelect.id] || [];
     setActiveChat({ ...chatToSelect, messages: chatMessages });
 
-    setShowNewChatView(false); // UI concern, passed from App
-    setShowContactInfoPanel(false); // UI concern, passed from App
+    setShowNewChatView(false);
+    setShowContactInfoPanel(false);
   };
 
   const handleCreateGroup = (
     groupName: string, 
     selectedContactIds: string[],
     setShowCreateGroupView: React.Dispatch<React.SetStateAction<boolean>>,
-    setActiveChatHook: React.Dispatch<React.SetStateAction<ActiveChat | null>> // To set the new group as active
+    setActiveChatHook: React.Dispatch<React.SetStateAction<ActiveChat | null>>
   ) => {
+    setIsCreatingGroup(true);
     const newGroupId = `group-${Date.now()}`;
     const currentUser = mockUsers[currentUserId];
     const selectedUsers = selectedContactIds.map(id => mockUsers[id]).filter(Boolean) as User[];
@@ -253,28 +288,28 @@ export const useChatManagement = () => {
       name: groupName,
       avatarUrl: `https://placehold.co/100x100/CCCCCC/000000?text=${groupName.substring(0,2).toUpperCase()}`,
       participants: participants,
-      lastMessage: undefined, // Or a system message like "Group created"
+      lastMessage: undefined,
       unreadCount: 0,
       lastActivity: Date.now(),
       isArchived: false,
       isMuted: false,
-      // Groups don't have isBlocked, but add if needed for other logic
     };
 
-    setAllChats(prev => [newGroupChat, ...prev].sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0)));
-    setMessages(prev => ({ ...prev, [newGroupId]: [] })); // Initialize messages for the new group
+    setTimeout(() => {
+      setAllChats(prev => [newGroupChat, ...prev].sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0)));
+      setMessages(prev => ({ ...prev, [newGroupId]: [] }));
 
-    // Set the new group as active and close the create group view
-    const newActiveGroup: ActiveChat = { ...newGroupChat, messages: [] };
-    setActiveChatHook(newActiveGroup);
-    setShowCreateGroupView(false); // UI concern, passed from App.tsx
-    setViewingContactInfoFor(null); // Ensure no contact info panel is open
+      const newActiveGroup: ActiveChat = { ...newGroupChat, messages: [] };
+      setActiveChatHook(newActiveGroup);
+      setShowCreateGroupView(false);
+      setViewingContactInfoFor(null);
+      setIsCreatingGroup(false);
+    }, 2000);
   };
 
   const handleForwardMessage = (
     originalMessage: Message,
     targetChatIds: string[],
-    // May need setShowArchivedView if forwarding unarchives chats, similar to handleSendMessage
   ) => {
     const timestamp = Date.now();
     targetChatIds.forEach(chatId => {
@@ -293,15 +328,13 @@ export const useChatManagement = () => {
       }
 
       const newMessage: Message = {
-        ...forwardedMessageContent, // Spread the content
+        ...forwardedMessageContent,
         id: `msg-${timestamp}-${Math.random().toString(36).substring(2, 9)}-fwdto-${chatId}`,
         timestamp: timestamp,
-        senderId: currentUserId, // The user forwarding is the sender in the new chat
+        senderId: currentUserId,
         type: 'outgoing',
         status: 'sent',
         isForwarded: true,
-        // userName: currentUserName, // If needed for group context, but usually not for forwarded outgoing
-        // Original sender info can be displayed in the bubble if needed, but not part of core Message fields for new message
         replyToMessageId: undefined, 
         replyToMessagePreview: undefined,
         replyToSenderName: undefined,
@@ -320,7 +353,6 @@ export const useChatManagement = () => {
             const isTargetActive = c.id === activeChat?.id;
 
             if (originallyArchived && !isTargetActive) {
-              // Keep archived, increment unread count
               return {
                 ...c,
                 lastMessage: newMessage,
@@ -329,8 +361,6 @@ export const useChatManagement = () => {
                 unreadCount: (c.unreadCount || 0) + 1,
               };
             } else {
-              // Unarchive if it was archived and active, or if it wasn't archived initially
-              // Set unread count to 0 if target is active, else increment
               return {
                 ...c,
                 lastMessage: newMessage,
@@ -343,12 +373,10 @@ export const useChatManagement = () => {
           return c;
         }).sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0))
       );
-      // Removed setShowArchivedViewFromApp logic as it might not be needed with this change
     });
   };
 
   const handleToggleStarMessage = (messageId: string) => {
-    // Update messages state
     setMessages(prevMessages => {
       const updatedMessages: { [chatId: string]: Message[] } = {};
       for (const chatId in prevMessages) {
@@ -359,7 +387,6 @@ export const useChatManagement = () => {
       return updatedMessages;
     });
 
-    // Update activeChat if the message is in the active chat
     if (activeChat && activeChat.messages.some(msg => msg.id === messageId)) {
       setActiveChat(prevActiveChat => {
         if (!prevActiveChat) return null;
@@ -372,7 +399,6 @@ export const useChatManagement = () => {
       });
     }
 
-    // Update allChats if the starred/unstarred message was a lastMessage in any chat
     setAllChats(prevAllChats => 
       prevAllChats.map(chat => {
         if (chat.lastMessage?.id === messageId) {
@@ -384,22 +410,20 @@ export const useChatManagement = () => {
         return chat;
       })
     );
-    // Note: We are not changing the order of chats based on starring.
-    // If a starred messages view is added later, it will query this state.
   };
 
   return {
     allChats,
     activeChat,
-    setActiveChat, // Export setActiveChat directly
+    setActiveChat,
     messages,
     currentUserId,
     viewingContactInfoFor,
     setViewingContactInfoFor,
-    activeUserChats, // Export derived state
-    archivedUserChats, // Export derived state
-    unreadInArchivedCount, // Export derived state
-    availableContacts, // Export derived state
+    activeUserChats,
+    archivedUserChats,
+    unreadInArchivedCount,
+    availableContacts,
     handleSelectChat,
     handleSendMessage,
     toggleArchiveChatStatus,
@@ -408,10 +432,11 @@ export const useChatManagement = () => {
     handleDeleteChat,
     handleExitGroup,
     handleStartNewChat,
-    handleCloseContactInfo, // Export this utility if App.tsx needs it directly
-    handleCreateGroup, // Export new function
-    handleClearChatMessages, // Export new function
-    handleForwardMessage, // Export new function
-    handleToggleStarMessage // Export new function
+    handleCloseContactInfo,
+    handleCreateGroup,
+    handleClearChatMessages,
+    handleForwardMessage,
+    handleToggleStarMessage,
+    isCreatingGroup
   };
 };

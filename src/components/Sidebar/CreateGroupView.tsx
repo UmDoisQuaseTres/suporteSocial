@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowRight, faCamera, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faArrowRight, faCamera, faSearch, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import type { User } from '../../types';
 import ContactListItem from './ContactListItem'; // Re-use for consistency
 
@@ -9,6 +9,7 @@ interface CreateGroupViewProps {
   currentUserId: string; // To exclude current user from selection if needed, or for group logic
   onCreateGroup: (groupName: string, selectedContactIds: string[]) => void;
   onCancel: () => void; // To go back to the previous view
+  isCreatingGroup: boolean; // New prop for loading state
 }
 
 const CreateGroupView: React.FC<CreateGroupViewProps> = ({
@@ -16,6 +17,7 @@ const CreateGroupView: React.FC<CreateGroupViewProps> = ({
   currentUserId,
   onCreateGroup,
   onCancel,
+  isCreatingGroup, // Destructure new prop
 }) => {
   const [groupName, setGroupName] = useState('');
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
@@ -30,8 +32,10 @@ const CreateGroupView: React.FC<CreateGroupViewProps> = ({
   };
 
   const handleCreate = () => {
-    if (groupName.trim() && selectedContactIds.length > 0) {
+    if (groupName.trim() && selectedContactIds.length > 0 && !isCreatingGroup) {
       onCreateGroup(groupName.trim(), selectedContactIds);
+    } else if (isCreatingGroup) {
+      console.log("A criação do grupo está em andamento...");
     } else {
       alert('Por favor, defina um nome para o grupo e selecione pelo menos um contacto.');
     }
@@ -115,9 +119,14 @@ const CreateGroupView: React.FC<CreateGroupViewProps> = ({
         <div className="p-4">
           <button
             onClick={handleCreate}
-            className="flex w-full items-center justify-center rounded-full bg-whatsapp-light-green p-3 text-white hover:bg-whatsapp-dark-green focus:outline-none"
+            disabled={isCreatingGroup}
+            className="flex w-full items-center justify-center rounded-full bg-whatsapp-light-green p-3 text-white hover:bg-whatsapp-dark-green focus:outline-none disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <FontAwesomeIcon icon={faArrowRight} className="text-xl" />
+            {isCreatingGroup ? (
+              <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl" />
+            ) : (
+              <FontAwesomeIcon icon={faArrowRight} className="text-xl" />
+            )}
           </button>
         </div>
       )}
