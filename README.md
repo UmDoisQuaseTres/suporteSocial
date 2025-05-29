@@ -142,4 +142,4 @@ Contribuições são bem-vindas! Sinta-se à vontade para abrir *issues* para re
 2.  Crie uma branch para sua feature (`git checkout -b feature/NovaFuncionalidade`).
 3.  Faça commit das suas alterações (`git commit -m 'Adiciona NovaFuncionalidade'`).
 4.  Faça push para a sua branch (`git push origin feature/NovaFuncionalidade`).
-5.  Abra um Pull Request.
+5.  Abra um Pull Request.cls

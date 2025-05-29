@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCheck, faCheckDouble, faClock,
-  faImage, faMicrophone, faVideo
+  faImage, faMicrophone, faVideo, faFileAlt
 } from '@fortawesome/free-solid-svg-icons';
 import type { Chat, MessageStatus } from '../types'; // Ensure correct path to types
 
@@ -33,10 +33,11 @@ interface RenderMediaIconProps {
 export const renderMediaIcon = ({ chat, className = "mr-1.5 text-whatsapp-text-secondary" }: RenderMediaIconProps): React.ReactNode => {
   const lastMsg = chat.lastMessage;
   if (!lastMsg) return null;
-  // Consolidate checks for mediaType or direct URL properties
+  
   if (lastMsg.mediaType === 'image' || lastMsg.imageUrl) return <FontAwesomeIcon icon={faImage} className={className} />;
   if (lastMsg.mediaType === 'audio' || lastMsg.audioUrl) return <FontAwesomeIcon icon={faMicrophone} className={className} />;
   if (lastMsg.mediaType === 'video' || lastMsg.videoUrl) return <FontAwesomeIcon icon={faVideo} className={className} />;
-  // Consider adding faFileAlt for other document types if Chat type supports it more generically
+  if (lastMsg.mediaType === 'document') return <FontAwesomeIcon icon={faFileAlt} className={className} />;
+  
   return null;
 }; 

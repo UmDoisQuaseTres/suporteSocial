@@ -8,7 +8,14 @@ interface MainContentProps {
   mainContentWidthClass: string; // Nova prop para largura dinâmica
   activeChat: ActiveChat | null;
   currentUserId: string;
-  onSendMessage: (chatId: string, messageText: string) => void;
+  onSendMessage: (chatId: string, messageContent: { 
+    text?: string; 
+    imageUrl?: string; 
+    fileName?: string; // Added fileName
+    audioUrl?: string; // Added audioUrl
+    duration?: number; // Added duration
+    mediaType?: 'image' | 'document' | 'audio'; // Added audio
+  }) => void;
   onToggleArchiveStatus: (chatId: string) => void;
   onShowContactInfo: (chat: Chat) => void; // Nova prop
 }

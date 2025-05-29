@@ -7,7 +7,14 @@ import type { ActiveChat, Message, Chat } from '../../../types';
 interface ChatWindowProps {
   chat: ActiveChat;
   currentUserId: string;
-  onSendMessage: (chatId: string, messageText: string) => void;
+  onSendMessage: (chatId: string, messageContent: { 
+    text?: string; 
+    imageUrl?: string; 
+    fileName?: string;
+    audioUrl?: string;
+    duration?: number;
+    mediaType?: 'image' | 'document' | 'audio';
+  }) => void;
   messages: Message[];
   onToggleArchiveStatus: (chatId: string) => void;
   onShowContactInfo: (chat: Chat) => void;

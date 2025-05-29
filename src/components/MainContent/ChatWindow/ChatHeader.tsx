@@ -59,18 +59,18 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chat, onToggleArchiveStatus, on
       <div className="flex flex-shrink-0 items-center space-x-1 md:space-x-2"> {/* Reduzido space-x para mais ícones */}
         <button
             onClick={handleArchiveClick}
-            className="p-2 text-xl text-whatsapp-icon hover:text-gray-200"
+            className="p-2 text-lg text-whatsapp-icon hover:text-gray-200"
             title={chat.isArchived ? "Desarquivar Conversa" : "Arquivar Conversa"}
         >
             <FontAwesomeIcon icon={chat.isArchived ? faArrowUpFromBracket : faArchive} />
         </button>
-        <button className="p-2 text-xl text-whatsapp-icon hover:text-gray-200" title="Pesquisar">
+        <button className="p-2 text-lg text-whatsapp-icon hover:text-gray-200" title="Pesquisar">
           <FontAwesomeIcon icon={faSearch} />
         </button>
-        <button className="hidden p-2 text-xl text-whatsapp-icon hover:text-gray-200 sm:block" title="Anexar">
+        <button className="hidden p-2 text-lg text-whatsapp-icon hover:text-gray-200 sm:block" title="Anexar">
           <FontAwesomeIcon icon={faPaperclip} className="rotate-[-45deg] transform" />
         </button>
-        <button className="p-2 text-xl text-whatsapp-icon hover:text-gray-200" title="Mais opções">
+        <button className="p-2 text-lg text-whatsapp-icon hover:text-gray-200" title="Mais opções">
           <FontAwesomeIcon icon={faEllipsisV} />
         </button>
       </div>

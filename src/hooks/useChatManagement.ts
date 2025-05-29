@@ -43,13 +43,45 @@ export const useChatManagement = () => {
     setShowContactInfoPanel(false); // UI concern, passed from App
   };
 
-  const handleSendMessage = (chatId: string, messageText: string, currentShowArchivedView: boolean, setShowArchivedView: React.Dispatch<React.SetStateAction<boolean>>) => {
+  const handleSendMessage = (
+    chatId: string, 
+    messageContent: { 
+      text?: string; 
+      imageUrl?: string; 
+      fileName?: string;
+      audioUrl?: string;
+      duration?: number;
+      mediaType?: 'image' | 'document' | 'audio';
+    },
+    currentShowArchivedView: boolean, 
+    setShowArchivedView: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
     if (!activeChat || activeChat.id !== chatId) return;
     if (activeChat.isBlocked) {
         alert("Não pode enviar mensagens para um contacto bloqueado.");
         return;
     }
-    const newMessage: Message = { id: `msg-${Date.now()}`, text: messageText, timestamp: Date.now(), senderId: currentUserId, type: 'outgoing', status: 'sent'};
+
+    // Ensure there's some content to send
+    if (!messageContent.text && !messageContent.imageUrl && !messageContent.fileName && !messageContent.audioUrl) {
+      console.error("Attempted to send an empty message.");
+      return;
+    }
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      text: messageContent.text,
+      imageUrl: messageContent.imageUrl,
+      fileName: messageContent.fileName,
+      audioUrl: messageContent.audioUrl,
+      duration: messageContent.duration,
+      mediaType: messageContent.mediaType,
+      timestamp: Date.now(),
+      senderId: currentUserId,
+      type: 'outgoing',
+      status: 'sent'
+    };
+
     setActiveChat(prev => prev ? { ...prev, messages: [...prev.messages, newMessage] } : null);
     setMessages(prevMsgs => ({ ...prevMsgs, [chatId]: [...(prevMsgs[chatId] || []), newMessage] }));
     let chatWasArchived = false;

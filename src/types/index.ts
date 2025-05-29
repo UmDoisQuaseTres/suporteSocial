@@ -9,11 +9,14 @@ export interface User {
   
   export interface Message {
     id: string;
-    text?: string;
+    text?: string; // Caption for media, or text message
     imageUrl?: string;
-    audioUrl?: string; // Novo: para indicar áudio
-    videoUrl?: string; // Novo: para indicar vídeo
-    mediaType?: 'image' | 'audio' | 'video'; // Novo: para facilitar
+    audioUrl?: string;
+    videoUrl?: string;
+    documentUrl?: string; // For potential future download link
+    fileName?: string; // To display the name of the document
+    duration?: number; // Added for audio/video duration in seconds
+    mediaType?: 'image' | 'audio' | 'video' | 'document'; // Added 'document'
     timestamp: number; // Usaremos timestamp para ordenação e formatação
     senderId: string; // Para saber quem enviou
     receiverId?: string; // Para chats 1-1

@@ -67,8 +67,8 @@ function App() {
   const mainContentWidth = showContactInfoPanel ? "md:w-2/4" : "md:w-2/3";
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-gray-800">
-      <div className="flex h-full w-full overflow-hidden shadow-2xl md:h-[95%] md:w-[95%] md:max-w-7xl md:rounded-lg">
+    <div className="flex h-screen w-screen items-center justify-center bg-whatsapp-chat-bg">
+      <div className="flex h-full w-full overflow-hidden shadow-2xl md:h-screen md:w-full md:max-w-none md:rounded-none">
         <Sidebar
           sidebarWidthClass={sidebarWidth}
           unreadInArchivedCount={unreadInArchivedCount}

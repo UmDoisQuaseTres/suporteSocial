@@ -40,8 +40,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
 
   return (
     <div
-      className="chat-scrollbar flex-1 overflow-y-auto bg-cover bg-center p-4 md:p-6 space-y-2"
-      style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')" }}
+      className="chat-scrollbar flex-1 overflow-y-auto p-4 md:p-6 space-y-2"
     >
       {Object.entries(groupedMessages).map(([date, msgsInDate]) => (
         <React.Fragment key={date}>

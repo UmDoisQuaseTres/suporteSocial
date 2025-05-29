@@ -12,7 +12,7 @@ const ArchivedItem: React.FC<ArchivedItemProps> = ({ unreadCount, onClick, total
   if (totalArchived === 0) return null;
   return (
     <div 
-      className="flex cursor-pointer items-center border-b border-gray-700/30 px-3 py-4 text-whatsapp-text-primary hover:bg-whatsapp-active-chat" 
+      className="flex cursor-pointer items-center border-b border-whatsapp-header-bg px-3 py-3 text-whatsapp-text-primary hover:bg-whatsapp-active-chat"
       onClick={onClick}
     >
       <div className="mr-4 flex h-12 w-12 items-center justify-center">

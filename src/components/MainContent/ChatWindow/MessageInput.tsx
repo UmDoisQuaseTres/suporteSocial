@@ -2,14 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSmile, faPlus, faMicrophone, faPaperPlane, faLock,
-  faFileAlt, faCamera, faImage // Ícones para o menu de anexos
+  faFileAlt, faCamera, faImage,
+  faStopCircle, faTrashAlt // Added icons for recording controls
 } from '@fortawesome/free-solid-svg-icons';
 import ImportedEmojiPicker, { type EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react';
 import AttachmentMenuItem from './AttachmentMenuItem'; // Import the new component
 
 interface MessageInputProps {
   chatId: string;
-  onSendMessage: (chatId: string, messageText: string) => void;
+  onSendMessage: (chatId: string, messageContent: { 
+    text?: string; 
+    imageUrl?: string; 
+    fileName?: string;
+    audioUrl?: string; // Added audioUrl
+    duration?: number; // Added duration
+    mediaType?: 'image' | 'document' | 'audio'; // Added audio to mediaType
+  }) => void;
   isChatBlocked?: boolean;
   onOpenContactInfo?: () => void;
 }
@@ -17,6 +25,17 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({ chatId, onSendMessage, isChatBlocked, onOpenContactInfo }) => {
   const [inputText, setInputText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null); // Ref for the hidden image input
+  const documentInputRef = useRef<HTMLInputElement>(null); // Ref for the hidden document input
+  
+  // States for audio recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false); // Novo estado para o menu de anexos
@@ -36,7 +55,18 @@ const MessageInput: React.FC<MessageInputProps> = ({ chatId, onSendMessage, isCh
       setTimeout(() => { textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + emojiData.emoji.length; adjustTextareaHeight(); }, 0);
     } else { setInputText((prevText) => prevText + emojiData.emoji); }
   };
-  const handleSend = () => { if (inputText.trim()) { onSendMessage(chatId, inputText.trim()); setInputText(''); setShowEmojiPicker(false); setShowAttachmentMenu(false); } };
+  const handleSend = () => { 
+    if (isRecording) { // If recording, stop and send
+      stopRecordingAndSend();
+      return;
+    }
+    if (inputText.trim()) { 
+      onSendMessage(chatId, { text: inputText.trim() }); 
+      setInputText(''); 
+      setShowEmojiPicker(false); 
+      setShowAttachmentMenu(false); 
+    } 
+  };
   const handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
   
   const toggleEmojiPicker = (event: React.MouseEvent) => { event.stopPropagation(); setShowEmojiPicker(!showEmojiPicker); setShowAttachmentMenu(false); };
@@ -65,14 +95,150 @@ const MessageInput: React.FC<MessageInputProps> = ({ chatId, onSendMessage, isCh
     return () => { document.removeEventListener('mousedown', handleClickOutside); };
   }, [showEmojiPicker, showAttachmentMenu]);
 
-  const handleAttachmentOptionClick = (option: string) => {
-    console.log(`${option} selecionado.`);
-    setShowAttachmentMenu(false);
-    // Aqui você poderia, no futuro, abrir um seletor de arquivos ou câmera
-    // Por agora, apenas fechamos o menu e logamos.
-    // Poderia também adicionar um placeholder no input: setInputText(`Anexar ${option}: `);
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageUrl = reader.result as string;
+        // Send image with current inputText as caption. Clear input text.
+        onSendMessage(chatId, { imageUrl, text: inputText.trim() || undefined, mediaType: 'image' });
+        setInputText(''); // Clear text input after sending image
+        setShowAttachmentMenu(false); // Close attachment menu
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset file input value so the same file can be selected again if needed
+    if (event.target) {
+      event.target.value = '';
+    }
   };
 
+  const handleDocumentSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // For documents, we just send the file name and type. No local preview like images for now.
+      // A real implementation would upload the file and get a URL.
+      onSendMessage(chatId, { 
+        fileName: file.name, 
+        text: inputText.trim() || undefined, // Use current input text as caption
+        mediaType: 'document' 
+      });
+      setInputText(''); // Clear text input after selecting document
+      setShowAttachmentMenu(false); // Close attachment menu
+    }
+    // Reset file input value
+    if (event.target) {
+      event.target.value = '';
+    }
+  };
+
+  const handleAttachmentOptionClick = (option: string) => {
+    if (option === 'Galeria') {
+      imageInputRef.current?.click();
+    } else if (option === 'Documento') {
+      documentInputRef.current?.click(); // Trigger document file input
+    } else {
+      console.log(`${option} selecionado.`);
+    }
+    setShowAttachmentMenu(false); // Ensure menu closes
+  };
+
+  const updateRecordingDuration = () => {
+    if (recordingStartTime) {
+      setRecordingDuration(Math.round((Date.now() - recordingStartTime) / 1000));
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' }); // or audio/ogg, etc.
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const finalDuration = recordingDuration;
+        onSendMessage(chatId, { audioUrl, mediaType: 'audio', duration: finalDuration });
+        
+        // Clean up stream tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setRecordingStartTime(Date.now());
+      setIsRecording(true);
+      setRecordingDuration(0);
+      if(recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = setInterval(updateRecordingDuration, 1000) as unknown as number;
+      setShowEmojiPicker(false); 
+      setShowAttachmentMenu(false);
+
+    } catch (err) {
+      console.error("Error starting recording: ", err);
+      alert("Não foi possível iniciar a gravação. Verifique as permissões do microfone.");
+    }
+  };
+
+  const stopRecordingAndSend = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if(recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      setRecordingStartTime(null);
+      // onSendMessage is called in onstop handler of MediaRecorder
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop()); // Stop stream first
+        mediaRecorderRef.current.onstop = null; // Prevent onstop from firing and sending
+        mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if(recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setRecordingStartTime(null);
+    setRecordingDuration(0);
+    audioChunksRef.current = [];
+  };
+
+  useEffect(() => {
+    // Cleanup timer if component unmounts while recording
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Main send button / mic button logic
+  const mainButtonAction = () => {
+    if (inputText.trim() && !isRecording) {
+      handleSend();
+    } else if (!isRecording) {
+      startRecording();
+    } else { // isRecording
+      stopRecordingAndSend();
+    }
+  };
+
+  const getMainButtonIcon = () => {
+    if (isRecording) return faStopCircle; // Or faPaperPlane if we want send icon while recording
+    if (inputText.trim()) return faPaperPlane;
+    return faMicrophone;
+  };
+
+  const getMainButtonTitle = () => {
+    if (isRecording) return "Enviar Gravação";
+    if (inputText.trim()) return "Enviar";
+    return "Gravar Áudio";
+  }
 
   if (isChatBlocked) {
     return (
@@ -89,7 +255,23 @@ const MessageInput: React.FC<MessageInputProps> = ({ chatId, onSendMessage, isCh
   }
 
   return (
-    <footer className="relative flex items-end space-x-2 border-t border-gray-700/50 bg-whatsapp-header-bg p-3 md:space-x-3">
+    <footer className="relative flex items-end space-x-2 border-t border-gray-700/50 bg-whatsapp-header-bg p-2 md:space-x-3">
+      {/* Hidden File Input for Images */}
+      <input
+        type="file"
+        accept="image/*"
+        ref={imageInputRef}
+        style={{ display: 'none' }}
+        onChange={handleImageSelect}
+      />
+      {/* Hidden File Input for Documents */}
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx" // Common document types
+        ref={documentInputRef}
+        style={{ display: 'none' }}
+        onChange={handleDocumentSelect}
+      />
       {/* Menu de Anexos */}
       {showAttachmentMenu && (
         <div ref={attachmentMenuRef} className="absolute bottom-full mb-2 left-0 z-20 bg-whatsapp-header-bg p-3 rounded-lg shadow-xl border border-gray-700/50">
@@ -117,14 +299,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ chatId, onSendMessage, isCh
         ref={attachmentButtonRef} // Ref para o botão de anexo
         title="Anexar"
         onClick={toggleAttachmentMenu}
-        className="attachment-toggle-button p-2 text-xl text-whatsapp-icon hover:text-gray-200"
+        className="attachment-toggle-button p-2 text-lg text-whatsapp-icon hover:text-gray-200"
       >
         <FontAwesomeIcon icon={faPlus} />
       </button>
       <button
         title="Emojis"
         onClick={toggleEmojiPicker}
-        className="emoji-toggle-button p-2 text-xl text-whatsapp-icon hover:text-gray-200"
+        className="emoji-toggle-button p-2 text-lg text-whatsapp-icon hover:text-gray-200"
       >
         <FontAwesomeIcon icon={faSmile} />
       </button>
@@ -135,13 +317,27 @@ const MessageInput: React.FC<MessageInputProps> = ({ chatId, onSendMessage, isCh
         rows={1}
         onClick={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); }} // Fecha ambos os menus
       />
-      <button
-        title={inputText.trim() ? "Enviar" : "Microfone"}
-        onClick={inputText.trim() ? handleSend : () => alert('Funcionalidade de microfone não implementada.')}
-        className="flex h-10 w-10 items-center justify-center p-2 text-xl text-whatsapp-icon hover:text-gray-200"
-      >
-        <FontAwesomeIcon icon={inputText.trim() ? faPaperPlane : faMicrophone} />
-      </button>
+      {isRecording ? (
+        <div className="flex flex-1 items-center text-sm text-whatsapp-text-secondary">
+            <FontAwesomeIcon icon={faMicrophone} className="mr-2 text-red-500 animate-pulse" />
+            Gravando... {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{ (recordingDuration % 60).toString().padStart(2, '0')}
+            <button 
+              title="Cancelar Gravação"
+              onClick={cancelRecording}
+              className="ml-auto p-2 text-lg text-red-500 hover:text-red-400"
+            >
+              <FontAwesomeIcon icon={faTrashAlt} />
+            </button>
+        </div>
+      ) : (
+        <button
+          title={getMainButtonTitle()}
+          onClick={mainButtonAction}
+          className="flex h-10 w-10 items-center justify-center p-2 text-lg text-whatsapp-icon hover:text-gray-200"
+        >
+          <FontAwesomeIcon icon={getMainButtonIcon()} />
+        </button>
+      )}
     </footer>
   );
 };

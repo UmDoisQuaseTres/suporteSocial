@@ -49,17 +49,17 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({ showArchived, showNewChat
           className="cursor-pointer"
           fallbackText="EU"
         />
-        <div className="flex items-center space-x-1 md:space-x-4">
-          <button title="Comunidades" className="p-2 text-xl text-whatsapp-icon hover:text-gray-200">
+        <div className="flex items-center space-x-1 md:space-x-2">
+          <button title="Comunidades" className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
             <FontAwesomeIcon icon={faUsers} />
           </button>
-          <button title="Status" className="p-2 text-xl text-whatsapp-icon hover:text-gray-200">
+          <button title="Status" className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
             <FontAwesomeIcon icon={faCircleNotch} />
           </button>
-          <button title="Nova conversa" onClick={onToggleNewChatView} className="p-2 text-xl text-whatsapp-icon hover:text-gray-200">
+          <button title="Nova conversa" onClick={onToggleNewChatView} className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
             <FontAwesomeIcon icon={faCommentDots} />
           </button>
-          <button title="Menu" className="p-2 text-xl text-whatsapp-icon hover:text-gray-200">
+          <button title="Menu" className="p-2 text-lg text-whatsapp-icon hover:text-gray-200">
             <FontAwesomeIcon icon={faEllipsisV} />
           </button>
         </div>
