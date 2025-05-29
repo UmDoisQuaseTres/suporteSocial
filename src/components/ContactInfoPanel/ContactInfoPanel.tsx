@@ -22,6 +22,7 @@ interface ContactInfoPanelProps {
   onDeleteChat: (chatId: string) => void;
   onExitGroup: (chatId: string) => void;
   onShowMediaGallery: (chat: Chat) => void;
+  onShowStarredMessages: () => void;
 }
 
 // A simple visual separator component
@@ -30,7 +31,8 @@ const SectionSeparator: React.FC = () => <hr className="mx-0 my-1 border-gray-70
 const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   chatInfo, chatMessages, onClose, panelWidthClass, currentUserId,
   onToggleMuteChat, onToggleBlockChat, onDeleteChat, onExitGroup,
-  onShowMediaGallery
+  onShowMediaGallery,
+  onShowStarredMessages
 }) => {
   const isGroup = chatInfo.type === 'group';
   const contactUser = isGroup ? null : chatInfo.participants?.find(p => p.id !== currentUserId);
@@ -157,7 +159,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           <InfoPanelMenuItem 
             icon={faStar} 
             text="Mensagens favoritas" 
-            onClick={() => console.log("Starred messages clicked for chat:", chatInfo.id)} 
+            onClick={onShowStarredMessages}
           />
            <InfoPanelMenuItem
             icon={faCog}

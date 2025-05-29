@@ -186,6 +186,7 @@ function App() {
             onDeleteChat={(chatId) => handleDeleteChat(chatId, showArchivedView, setShowArchivedView)} 
             onExitGroup={(chatId) => handleExitGroup(chatId, showArchivedView, setShowArchivedView)} 
             onShowMediaGallery={handleShowMediaGallery}
+            onShowStarredMessages={handleToggleStarredMessagesView}
           />
         )}
       </div>

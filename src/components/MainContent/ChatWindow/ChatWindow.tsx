@@ -47,6 +47,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [showForwardModal, setShowForwardModal] = useState<boolean>(false);
+  const [isChatSearchActive, setIsChatSearchActive] = useState<boolean>(false);
+  const [chatSearchTerm, setChatSearchTerm] = useState<string>('');
 
   const handleStartReply = (message: Message) => {
     setReplyingTo(message);
@@ -91,6 +93,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  const handleToggleChatSearch = (isActive: boolean) => {
+    setIsChatSearchActive(isActive);
+    if (!isActive) {
+      setChatSearchTerm('');
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <ChatHeader
@@ -99,6 +108,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onShowContactInfo={onShowContactInfo}
         onClearChatMessages={onClearChatMessages}
         onDeleteChat={onDeleteChat}
+        isChatSearchActive={isChatSearchActive}
+        chatSearchTerm={chatSearchTerm}
+        onChatSearchChange={setChatSearchTerm}
+        onToggleChatSearch={handleToggleChatSearch}
       />
       <MessageArea
         messages={messages}
@@ -108,6 +121,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onToggleStarMessage={onToggleStarMessage}
         messageToHighlightId={messageToHighlightId}
         clearMessageToHighlight={clearMessageToHighlight}
+        chatSearchTerm={chatSearchTerm}
       />
       <MessageInput
         chatId={chat.id}

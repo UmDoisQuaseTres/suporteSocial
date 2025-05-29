@@ -19,9 +19,31 @@ interface MessageBubbleProps {
   onStartForward: (message: Message) => void; // Added prop to initiate forward
   onToggleStarMessage: (messageId: string) => void; // Added prop to toggle star status
   isHighlighted?: boolean; // Added for visual cue
+  searchTermToHighlight?: string; // New prop
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, onStartForward, onToggleStarMessage, isHighlighted }) => {
+// Helper function to highlight text
+const getHighlightedText = (text: string, highlight: string): React.ReactNode => {
+  if (!highlight.trim()) {
+    return text;
+  }
+  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, index) => 
+        part.toLowerCase() === highlight.toLowerCase() ? (
+          <span key={index} className="bg-yellow-300 text-black rounded-sm px-0.5">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, onStartForward, onToggleStarMessage, isHighlighted, searchTermToHighlight }) => {
   const isOutgoing = message.type === 'outgoing';
   // hasTextContent can be simplified as its direct usage for MessageMeta positioning will change
   // const hasTextContent = !!message.text;
@@ -121,7 +143,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
         <div className={`mt-0.5 ${isMediaMessage && message.text ? 'pb-1' : ''}`}> 
           {/* Add some padding bottom if text is a caption for media above */}
           <p className="text-sm whitespace-pre-wrap break-words">
-              {message.text}
+            {searchTermToHighlight ? getHighlightedText(message.text, searchTermToHighlight) : message.text}
           </p>
         </div>
       )}

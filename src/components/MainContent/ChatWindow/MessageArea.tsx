@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import MessageBubble from './MessageBubble';
 import type { Message } from '../../../types';
 
@@ -10,11 +10,21 @@ interface MessageAreaProps {
   onToggleStarMessage: (messageId: string) => void;
   messageToHighlightId?: string | null;
   clearMessageToHighlight?: () => void;
+  chatSearchTerm?: string;
 }
 
-const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId, onStartReply, onStartForward, onToggleStarMessage, messageToHighlightId, clearMessageToHighlight }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
+const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId, onStartReply, onStartForward, onToggleStarMessage, messageToHighlightId, clearMessageToHighlight, chatSearchTerm }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const highlightedMessageRef = useRef<HTMLDivElement>(null);
+
+  const filteredMessages = useMemo(() => {
+    if (!chatSearchTerm) {
+      return messages;
+    }
+    return messages.filter(msg => 
+      msg.text?.toLowerCase().includes(chatSearchTerm.toLowerCase())
+    );
+  }, [messages, chatSearchTerm]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -35,15 +45,15 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId, onSt
       if (clearMessageToHighlight) {
         clearMessageToHighlight();
       }
-    } else if (!messageToHighlightId) {
+    } else if (!messageToHighlightId && !chatSearchTerm) {
       const timer = setTimeout(() => {
           scrollToBottom();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [messages, messageToHighlightId, clearMessageToHighlight]);
+  }, [filteredMessages, messageToHighlightId, clearMessageToHighlight, chatSearchTerm]);
 
-  const groupedMessages: { [date: string]: Message[] } = (messages || []).reduce((acc, msg) => { // Adicionado (messages || []) para segurança
+  const groupedMessages: { [date: string]: Message[] } = (filteredMessages || []).reduce((acc, msg) => { // Adicionado (filteredMessages || []) para segurança
     const dateKey = new Date(msg.timestamp).toLocaleDateString('pt-PT', {day: '2-digit', month: 'long', year: 'numeric'});
     if (!acc[dateKey]) {
       acc[dateKey] = [];
@@ -78,6 +88,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId, onSt
                 onStartForward={onStartForward}
                 onToggleStarMessage={onToggleStarMessage}
                 isHighlighted={message.id === messageToHighlightId}
+                searchTermToHighlight={chatSearchTerm}
               />
             </div>
           ))}
