@@ -34,6 +34,7 @@ export interface User {
     participants?: User[]; // Para grupos
     isArchived?: boolean;
     isMuted?: boolean;
+    isBlocked?: boolean;
   }
   
   export interface ActiveChat extends Chat {
