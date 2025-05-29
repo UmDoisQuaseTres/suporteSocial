@@ -19,6 +19,7 @@ export default {
         'whatsapp-text-secondary': '#8696A0', // Texto secundário (cinza claro)
         'whatsapp-icon': '#AEBAC1', // Ícones
         'whatsapp-active-chat': '#2A3942', // Chat ativo ou hover
+        'whatsapp-date-pill-bg': '#182229'
       }
     },
   },

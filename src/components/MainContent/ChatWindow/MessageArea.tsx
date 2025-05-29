@@ -1,25 +1,34 @@
 import React, { useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
-import type { Message } from '../../../types'; // Certifique-se que o caminho está correto
+import type { Message } from '../../../types';
 
 interface MessageAreaProps {
   messages: Message[];
-  currentUserId: string;
+  currentUserId: string; // Removido pois MessageBubble já usa message.type
 }
 
-const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) => {
+const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+        // Para scroll suave em novos chats ou ao carregar muitos,
+        // pode ser melhor usar scrollIntoView({ block: 'end' }) na primeira vez
+        // e behavior: 'smooth' para novas mensagens individuais.
+        // Por agora, mantemos 'smooth'.
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]); // Rola sempre que as mensagens mudam
+    // Atrasar um pouco o scroll para dar tempo da UI renderizar, especialmente se houver muitas mensagens
+    const timer = setTimeout(() => {
+        scrollToBottom();
+    }, 100); // Pequeno delay
+    return () => clearTimeout(timer);
+  }, [messages]);
 
-  // Agrupar mensagens por data
-  const groupedMessages: { [date: string]: Message[] } = messages.reduce((acc, msg) => {
+  const groupedMessages: { [date: string]: Message[] } = (messages || []).reduce((acc, msg) => { // Adicionado (messages || []) para segurança
     const dateKey = new Date(msg.timestamp).toLocaleDateString('pt-PT', {day: '2-digit', month: 'long', year: 'numeric'});
     if (!acc[dateKey]) {
       acc[dateKey] = [];
@@ -37,12 +46,14 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
       {Object.entries(groupedMessages).map(([date, msgsInDate]) => (
         <React.Fragment key={date}>
           <div className="my-3 flex justify-center">
-            <span className="rounded-full bg-whatsapp-incoming-bubble/80 px-3 py-1 text-xs text-whatsapp-text-secondary shadow">
+            {/* ESTILO DO SEPARADOR DE DATA ATUALIZADO */}
+            <span className="rounded-lg bg-whatsapp-date-pill-bg px-2.5 py-1 text-xs font-medium text-whatsapp-text-secondary shadow-sm">
               {date === new Date().toLocaleDateString('pt-PT', {day: '2-digit', month: 'long', year: 'numeric'}) ? 'Hoje' : date}
             </span>
           </div>
+          {/* Passando currentUserId para MessageBubble se ele ainda precisar */}
           {msgsInDate.map((message) => (
-            <MessageBubble key={message.id} message={message} currentUserId={currentUserId} />
+            <MessageBubble key={message.id} message={message} /* currentUserId={currentUserId} */ />
           ))}
         </React.Fragment>
       ))}

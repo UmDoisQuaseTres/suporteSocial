@@ -1,5 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faXmark, faUser, faUsers, faPhone, faBellSlash, faStar,
   faPhotoFilm, faLink, faFileLines, faBan, faTrashAlt, faRightFromBracket,
@@ -16,7 +17,7 @@ interface ContactInfoPanelProps {
 }
 
 const InfoPanelMenuItem: React.FC<{
-  icon: any;
+  icon: IconDefinition;
   text: string;
   subtext?: string;
   colorClass?: string;

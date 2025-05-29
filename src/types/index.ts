@@ -2,6 +2,7 @@ export interface User {
     id: string;
     name: string;
     avatarUrl?: string;
+    about?: string;
   }
   
   export type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending';

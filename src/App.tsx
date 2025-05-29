@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar/Sidebar';
 import MainContent from './components/MainContent/MainContent';
-import ContactInfoPanel from './components/ContactInfoPanel/ContactInfoPanel'; // Novo componente
+import ContactInfoPanel from './components/ContactInfoPanel/ContactInfoPanel';
 import type { Chat, ActiveChat, Message, User } from './types';
 
-// Dados de exemplo (MOCK) - como definidos anteriormente
+// Dados de exemplo (MOCK) - como na sua versão
 const mockUsers: { [id: string]: User } = {
   'currentUser': { id: 'currentUser', name: 'Eu', avatarUrl: 'https://placehold.co/40x40/FFFFFF/000000?text=EU', about: 'Eu sou o usuário atual' },
   'amigo1': { id: 'amigo1', name: 'Amigo 1', avatarUrl: 'https://placehold.co/50x50/25D366/FFFFFF?text=A1', about: 'Amigo 1 é um amigo de longa data' },
-  'user2': { id: 'user2', name: 'João', avatarUrl: 'https://placehold.co/50x50/FBC531/FFFFFF?text=J' },
-  'user3': { id: 'user3', name: 'Colega de Trabalho', avatarUrl: 'https://placehold.co/50x50/3498DB/FFFFFF?text=C2' },
+  'user2': { id: 'user2', name: 'João', avatarUrl: 'https://placehold.co/50x50/FBC531/FFFFFF?text=J' , about: 'Apenas João.'},
+  'user3': { id: 'user3', name: 'Colega de Trabalho', avatarUrl: 'https://placehold.co/50x50/3498DB/FFFFFF?text=C2', about: 'Colega gente boa.' },
   'promoBot': { id: 'promoBot', name: 'Promo Bot', avatarUrl: 'https://placehold.co/50x50/E74C3C/FFFFFF?text=N' },
-  'tiaMaria': { id: 'tiaMaria', name: 'Tia Maria', avatarUrl: 'https://placehold.co/50x50/AAAAAA/FFFFFF?text=TM'},
-  'amigo2': { id: 'amigo2', name: 'Amigo Distante', avatarUrl: 'https://placehold.co/50x50/8E44AD/FFFFFF?text=A2'},
-  'chefe': { id: 'chefe', name: 'Chefe', avatarUrl: 'https://placehold.co/50x50/34495E/FFFFFF?text=C'},
+  'tiaMaria': { id: 'tiaMaria', name: 'Tia Maria', avatarUrl: 'https://placehold.co/50x50/AAAAAA/FFFFFF?text=TM', about: 'Adoro a família!'},
+  'amigo2': { id: 'amigo2', name: 'Amigo Distante', avatarUrl: 'https://placehold.co/50x50/8E44AD/FFFFFF?text=A2', about: 'Viajando o mundo.'},
+  'chefe': { id: 'chefe', name: 'Chefe', avatarUrl: 'https://placehold.co/50x50/34495E/FFFFFF?text=C', about: 'Work hard, play hard.'},
 };
 
 const initialMockChats: Chat[] = [
@@ -24,22 +24,54 @@ const initialMockChats: Chat[] = [
   },
   {
     id: 'group1', type: 'group', name: 'Grupo da Família', avatarUrl: 'https://placehold.co/50x50/FBC531/FFFFFF?text=G',
-    lastMessage: { id: 'm2', text: 'Foto nova!', timestamp: Date.now() - 86400000, senderId: 'user2', type: 'incoming', userName: mockUsers['user2'].name},
-    unreadCount: 3, lastActivity: Date.now() - 86400000, participants: [mockUsers['currentUser'], mockUsers['user2'], mockUsers['tiaMaria']], isArchived: false,
+    lastMessage: { id: 'm2', text: 'Foto nova!', timestamp: Date.now() - 86400000, senderId: 'user2', type: 'incoming', userName: mockUsers['user2'].name, mediaType: 'image', imageUrl: '...'},
+    unreadCount: 0, lastActivity: Date.now() - 86400000, participants: [mockUsers['user2'], mockUsers['currentUser'], mockUsers['tiaMaria']], isArchived: false,
   },
   {
     id: '3', type: 'user', name: mockUsers['user3'].name, avatarUrl: mockUsers['user3'].avatarUrl,
-    lastMessage: { id: 'm3', text: 'Áudio (0:15)', timestamp: Date.now() - 172800000, senderId: 'user3', type: 'incoming' },
-    unreadCount: 0, lastActivity: Date.now() - 172800000, isArchived: true, participants: [mockUsers['currentUser'], mockUsers['user3']]
+    lastMessage: { id: 'm3', text: 'Áudio (0:15)', timestamp: Date.now() - 172800000, senderId: 'user3', type: 'incoming', mediaType: 'audio' },
+    unreadCount: 1, lastActivity: Date.now() - 172800000, isArchived: true, participants: [mockUsers['currentUser'], mockUsers['user3']]
   },
+   {
+    id: '4', type: 'user', name: mockUsers['promoBot'].name, avatarUrl: mockUsers['promoBot'].avatarUrl,
+    lastMessage: { id: 'm4', text: 'Promoção imperdível!', timestamp: Date.now() - 345600000, senderId: 'promoBot', type: 'incoming' },
+    unreadCount: 0, lastActivity: Date.now() - 345600000, isArchived: true, participants: [mockUsers['currentUser'], mockUsers['promoBot']]
+  },
+  {
+    id: '5', type: 'user', name: mockUsers['amigo2'].name, avatarUrl: mockUsers['amigo2'].avatarUrl,
+    lastMessage: { id: 'm5', text: 'Áudio (0:35)', mediaType: 'audio', timestamp: Date.now() - 200000, senderId: 'currentUser', type: 'outgoing', status: 'delivered' },
+    unreadCount: 0, lastActivity: Date.now() - 200000, isArchived: false, participants: [mockUsers['currentUser'], mockUsers['amigo2']]
+  },
+  {
+    id: '6', type: 'user', name: mockUsers['chefe'].name, avatarUrl: mockUsers['chefe'].avatarUrl,
+    lastMessage: { id: 'm6', text: 'Relatório enviado.', timestamp: Date.now() - 50000, senderId: 'currentUser', type: 'outgoing', status: 'sent' },
+    unreadCount: 0, lastActivity: Date.now() - 50000, isArchived: false, participants: [mockUsers['currentUser'], mockUsers['chefe']]
+  }
 ];
 
 const initialMockMessages: { [chatId: string]: Message[] } = {
-  '1': [ /* ... mensagens ... */ ],
-  'group1': [ /* ... mensagens ... */ ],
-  '3': [ /* ... mensagens ... */ ],
+  '1': [
+    { id: 'msg1-1', text: 'Olá! Tudo bem por aí?', timestamp: Date.now() - 120000, senderId: 'amigo1', type: 'incoming' },
+    { id: 'msg1-2', text: 'Ok, combinado!', timestamp: Date.now() - 100000, senderId: 'currentUser', type: 'outgoing', status: 'read' },
+  ],
+  'group1': [
+    { id: 'msg2-1', text: 'Alguém viu meu óculos?', userName: mockUsers['tiaMaria'].name, timestamp: Date.now() - 90000000, senderId: 'tiaMaria', type: 'incoming' },
+    { id: 'msg2-2', text: 'Foto nova!', userName: mockUsers['user2'].name, imageUrl: 'https://placehold.co/300x200/RANDOM/FFFFFF?text=Foto+Grupo', mediaType:'image', timestamp: Date.now() - 86400000, senderId: 'user2', type: 'incoming' },
+  ],
+  '3': [
+    { id: 'msg3-1', text: 'Este é um chat arquivado.', timestamp: Date.now() - 180000000, senderId: 'user3', type: 'incoming' },
+    { id: 'msg3-2', text: 'Entendido.', timestamp: Date.now() - 179000000, senderId: 'currentUser', type: 'outgoing', status: 'delivered' },
+  ],
+   '4': [
+    { id: 'msg4-1', text: 'Promoção imperdível!', timestamp: Date.now() - 345600000, senderId: 'promoBot', type: 'incoming' },
+  ],
+  '5': [
+    { id: 'msg5-1', text: 'Áudio (0:35)', mediaType: 'audio', timestamp: Date.now() - 200000, senderId: 'currentUser', type: 'outgoing', status: 'delivered' },
+  ],
+  '6': [
+    { id: 'msg6-1', text: 'Relatório enviado.', timestamp: Date.now() - 50000, senderId: 'currentUser', type: 'outgoing', status: 'sent' },
+  ]
 };
-
 
 function App() {
   const [allChats, setAllChats] = useState<Chat[]>(initialMockChats);
@@ -50,39 +82,30 @@ function App() {
   const [showNewChatView, setShowNewChatView] = useState<boolean>(false);
   const [messages, setMessages] = useState<{ [chatId: string]: Message[] }>(initialMockMessages);
 
-  // Novos estados para o painel de informações do contacto/grupo
   const [showContactInfoPanel, setShowContactInfoPanel] = useState<boolean>(false);
   const [viewingContactInfoFor, setViewingContactInfoFor] = useState<Chat | null>(null);
-
 
   const availableContacts: User[] = Object.values(mockUsers).filter(user => user.id !== currentUserId);
   const activeUserChats = allChats.filter(chat => !chat.isArchived);
   const archivedUserChats = allChats.filter(chat => chat.isArchived);
+  const unreadInArchivedCount = archivedUserChats.filter(chat => (chat.unreadCount || 0) > 0).length;
 
-  // Funções para o painel de informações
-  const handleShowContactInfo = (chat: Chat) => {
+  const handleShowContactInfo = (chat: Chat) => { /* ...como antes... */
     setViewingContactInfoFor(chat);
     setShowContactInfoPanel(true);
   };
-
-  const handleCloseContactInfoPanel = () => {
+  const handleCloseContactInfoPanel = () => { /* ...como antes... */
     setShowContactInfoPanel(false);
     setViewingContactInfoFor(null);
   };
-
-  const handleSelectChat = (chat: Chat) => {
-    // ... (lógica de handleSelectChat como antes)
+  const handleSelectChat = (chat: Chat) => { /* ...como antes... */
     const chatMessages = messages[chat.id] || [];
     setActiveChat({ ...chat, messages: chatMessages });
     setShowNewChatView(false);
-    //setShowArchivedView(false); // Não fechar arquivados se selecionar um chat de lá
     if (showArchivedView && chat.isArchived) {
-        // Mantém showArchivedView true
-    } else {
+    } else if (!chat.isArchived) {
         setShowArchivedView(false);
     }
-
-
     if ((!chat.isArchived && !showArchivedView) || (chat.isArchived && showArchivedView)) {
       if (chat.unreadCount && chat.unreadCount > 0) {
         setAllChats(prevChats => prevChats.map(c =>
@@ -90,29 +113,23 @@ function App() {
         ));
       }
     }
-    setShowContactInfoPanel(false); // Fecha o painel de info ao selecionar um chat
+    setShowContactInfoPanel(false);
   };
-
-  const handleToggleArchivedView = () => {
-    // ... (lógica de handleToggleArchivedView como antes)
+  const handleToggleArchivedView = () => { /* ...como antes... */
     setShowArchivedView(prev => !prev);
     setShowNewChatView(false);
     setActiveChat(null);
     setSearchTerm('');
     setShowContactInfoPanel(false);
   };
-
-  const handleToggleNewChatView = () => {
-    // ... (lógica de handleToggleNewChatView como antes)
+  const handleToggleNewChatView = () => { /* ...como antes... */
     setShowNewChatView(prev => !prev);
     setShowArchivedView(false);
     setActiveChat(null);
     setSearchTerm('');
     setShowContactInfoPanel(false);
   };
-
-  const handleStartNewChat = (contact: User) => {
-    // ... (lógica de handleStartNewChat como antes)
+  const handleStartNewChat = (contact: User) => { /* ...como antes... */
     const existingChat = allChats.find(chat =>
       chat.type === 'user' && chat.participants &&
       chat.participants.some(p => p.id === contact.id) &&
@@ -136,12 +153,9 @@ function App() {
   };
 
   const toggleArchiveChatStatus = (chatId: string) => {
-    // ... (lógica de toggleArchiveChatStatus como antes)
-    // ... (importante: se o chat que está no viewingContactInfoFor for arquivado, o painel deve fechar ou atualizar)
     if (viewingContactInfoFor?.id === chatId) {
-        handleCloseContactInfoPanel(); // Fecha o painel se o chat visualizado for arquivado/desarquivado
+        handleCloseContactInfoPanel();
     }
-    // ... (resto da lógica)
     let chatIsNowArchived = false;
     setAllChats(prevChats =>
       prevChats.map(chat => {
@@ -152,15 +166,25 @@ function App() {
         return chat;
       }).sort((a,b) => (b.lastActivity || 0) - (a.lastActivity || 0))
     );
-    if (activeChat?.id === chatId) setActiveChat(null);
-    const stillArchivedChats = allChats.map(c => c.id === chatId ? {...c, isArchived: chatIsNowArchived} : c).filter(c => c.isArchived);
-    if (showArchivedView && !chatIsNowArchived && stillArchivedChats.length === 0) {
+
+    // Se o chat ativo foi o que acabou de ser arquivado/desarquivado da lista principal, limpamos ele.
+    // Não limpamos se ele foi desarquivado e estávamos na vista de arquivados (será selecionado pela UI)
+    if (activeChat?.id === chatId && !chatIsNowArchived && !showArchivedView) {
+         // Se o chat foi desarquivado e estávamos na lista principal, nada a fazer aqui, ele continua lá.
+    } else if (activeChat?.id === chatId) {
+         setActiveChat(null);
+    }
+
+
+    const stillHaveArchivedChats = allChats.some(c => c.id !== chatId ? c.isArchived : chatIsNowArchived);
+    // Se estávamos na vista de arquivados e não há mais chats arquivados (porque o último foi desarquivado),
+    // voltamos para a lista principal.
+    if (showArchivedView && !stillHaveArchivedChats) {
         setShowArchivedView(false);
     }
   };
 
-  const handleSendMessage = (chatId: string, messageText: string): void => {
-    // ... (lógica de handleSendMessage como antes)
+  const handleSendMessage = (chatId: string, messageText: string): void => { /* ...como antes... */
     if (!activeChat || activeChat.id !== chatId) return;
     const newMessage: Message = {
       id: `msg-${Date.now()}`, text: messageText, timestamp: Date.now(),
@@ -177,7 +201,36 @@ function App() {
         return c;
     }).sort((a,b) => (b.lastActivity || 0) - (a.lastActivity || 0)));
     if (chatWasArchived && showArchivedView) setShowArchivedView(false);
-    setTimeout(() => { /* ... resposta simulada ... */ }, 1500);
+    setTimeout(() => {
+      if (activeChatRef.current && activeChatRef.current.id === chatId) {
+        const contactForReply = allChats.find(c => c.id === chatId);
+        let replySenderId = 'otherUser'; let replySenderName: string | undefined = undefined;
+        if(contactForReply?.type === 'user') replySenderId = contactForReply.participants?.find(p=>p.id !== currentUserId)?.id || 'otherUser';
+        else if (contactForReply?.type === 'group' && contactForReply.participants) {
+            const otherParticipant = contactForReply.participants.find(p => p.id !== currentUserId);
+            if(otherParticipant) { replySenderId = otherParticipant.id; replySenderName = otherParticipant.name; }
+        }
+        const replyMessage: Message = {
+          id: `reply-${Date.now()}`, text: `Ok: "${messageText.substring(0, 20)}..."`, timestamp: Date.now(),
+          senderId: replySenderId, type: 'incoming', userName: replySenderName,
+        };
+        setActiveChat(prev => prev && prev.id === chatId ? { ...prev, messages: [...prev.messages, replyMessage] } : prev);
+        setMessages(prevMsgs => ({ ...prevMsgs, [chatId]: [...(prevMsgs[chatId] || []), replyMessage] }));
+        let repliedChatWasArchivedBeforeUpdate = false;
+        setAllChats(prevAllChats => prevAllChats.map(c => {
+            if (c.id === chatId) {
+                repliedChatWasArchivedBeforeUpdate = !!c.isArchived;
+                const isChatCurrentlyActiveAndVisible = activeChatRef.current?.id === c.id && !showContactInfoPanel && !showArchivedView && !showNewChatView;
+                const newUnreadCount = isChatCurrentlyActiveAndVisible ? 0 : (c.unreadCount || 0) + 1;
+                return { ...c, lastMessage: replyMessage, unreadCount: newUnreadCount, lastActivity: replyMessage.timestamp, isArchived: false };
+            }
+            return c;
+        }).sort((a,b) => (b.lastActivity || 0) - (a.lastActivity || 0)));
+        if (repliedChatWasArchivedBeforeUpdate && showArchivedView) {
+            setShowArchivedView(false);
+        }
+      }
+    }, 1500 + Math.random() * 1000);
   };
 
   const activeChatRef = useRef(activeChat);
@@ -188,17 +241,15 @@ function App() {
     ? listToDisplayInitially.filter(chat => chat.name.toLowerCase().includes(searchTerm.toLowerCase()))
     : listToDisplayInitially;
 
-  // Ajustar classes de largura com base na visibilidade do painel de info
   const sidebarWidth = showContactInfoPanel ? "md:w-1/4" : "md:w-1/3";
-  const mainContentWidth = showContactInfoPanel ? "md:w-2/4" : "md:w-2/3"; // Ou md:w-1/2
+  const mainContentWidth = showContactInfoPanel ? "md:w-2/4" : "md:w-2/3";
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-gray-800">
-      <div className="flex h-full w-full overflow-hidden shadow-2xl md:h-[95%] md:w-[95%] md:max-w-7xl md:rounded-lg"> {/* Aumentado max-w se necessário */}
+      <div className="flex h-full w-full overflow-hidden shadow-2xl md:h-[95%] md:w-[95%] md:max-w-7xl md:rounded-lg">
         <Sidebar
-          // ...props da Sidebar como antes...
-          sidebarWidthClass={sidebarWidth} // Passa a classe de largura dinâmica
-          archivedChatsCount={archivedUserChats.length > 0 ? archivedUserChats.length : 0}
+          sidebarWidthClass={sidebarWidth}
+          unreadInArchivedCount={unreadInArchivedCount}
           onSelectChat={handleSelectChat}
           activeChatId={activeChat?.id}
           onToggleArchivedView={handleToggleArchivedView}
@@ -210,20 +261,22 @@ function App() {
           onToggleNewChatView={handleToggleNewChatView}
           availableContacts={availableContacts}
           onStartNewChat={handleStartNewChat}
+          onToggleArchiveChatStatus={toggleArchiveChatStatus} // <-- Passando a função para Sidebar
+          totalArchivedChats={archivedUserChats.length}
         />
         <MainContent
-          mainContentWidthClass={mainContentWidth} // Passa a classe de largura dinâmica
+          mainContentWidthClass={mainContentWidth}
           activeChat={activeChat}
           currentUserId={currentUserId}
           onSendMessage={handleSendMessage}
           onToggleArchiveStatus={toggleArchiveChatStatus}
-          onShowContactInfo={handleShowContactInfo} // Passando a nova função
+          onShowContactInfo={handleShowContactInfo}
         />
         {showContactInfoPanel && viewingContactInfoFor && (
           <ContactInfoPanel
             chatInfo={viewingContactInfoFor}
             onClose={handleCloseContactInfoPanel}
-            panelWidthClass="w-full md:w-1/4" // Define a largura do painel de info
+            panelWidthClass="w-full md:w-1/4"
             currentUserId={currentUserId}
           />
         )}
