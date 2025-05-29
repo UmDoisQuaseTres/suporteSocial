@@ -1,12 +1,13 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faXmark, faUser, faUsers, faPhone, faBellSlash, faStar, faBell,
   faPhotoFilm, faLink, faFileLines, faBan, faTrashAlt, faRightFromBracket,
   faUserShield, faUserCheck
 } from '@fortawesome/free-solid-svg-icons';
 import type { Chat, User } from '../../types';
+import InfoPanelMenuItem from './InfoPanelMenuItem';
+import Avatar from '../common/Avatar';
 
 interface ContactInfoPanelProps {
   chatInfo: Chat;
@@ -18,77 +19,6 @@ interface ContactInfoPanelProps {
   onDeleteChat: (chatId: string) => void;
   onExitGroup: (chatId: string) => void;
 }
-
-interface InfoPanelMenuItemProps {
-  icon: IconDefinition;
-  text: string;
-  subtext?: string;
-  colorClass?: string;
-  onClick?: () => void;
-  hasToggle?: boolean;
-  isToggled?: boolean;
-  onToggle?: () => void;
-}
-
-const InfoPanelMenuItem: React.FC<InfoPanelMenuItemProps> = ({
-  icon, text, subtext, colorClass = "text-whatsapp-text-secondary",
-  onClick, hasToggle, isToggled, onToggle
-}) => {
-  const handleItemClick = () => {
-    if (onToggle) {
-      onToggle();
-    } else if (onClick) {
-      onClick();
-    }
-  };
-
-  return (
-    <div
-      className={`flex items-center p-4 ${onToggle || onClick ? 'cursor-pointer hover:bg-whatsapp-active-chat' : 'cursor-default'}`}
-      onClick={handleItemClick} // O clique no item inteiro aciona o toggle ou o onClick
-    >
-      <FontAwesomeIcon icon={icon} className={`mr-6 w-5 text-xl ${colorClass}`} />
-      <div className="flex-1">
-        <span className="text-sm text-whatsapp-text-primary">{text}</span>
-        {subtext && <p className="text-xs text-whatsapp-text-secondary">{subtext}</p>}
-      </div>
-      {hasToggle && (
-        <div className="relative flex items-center">
-          <input
-            type="checkbox"
-            id={`toggle-${text.replace(/\s+/g, '-')}`} // ID único para o label
-            checked={!!isToggled}
-            onChange={onToggle} // Deixa o onChange aqui, pois o clique no label vai acioná-lo
-            className="sr-only peer" // Escondido, mas funcional e acessível (screen reader only + peer)
-          />
-          {/* Track do Toggle */}
-          <div
-            className={`w-11 h-[22px] rounded-full peer-focus:outline-none transition-colors duration-200 ease-in-out
-              ${isToggled ? 'bg-whatsapp-light-green' : 'bg-gray-500 peer-hover:bg-gray-600'}`
-            }
-          >
-            {/* Thumb (círculo) do Toggle */}
-            <div
-              className={`w-[16px] h-[16px] m-[3px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out
-                ${isToggled ? 'translate-x-[19px]' : ''}` // Ajuste o valor de translate-x se necessário
-                                                          // w-11 é 44px. Thumb é 16px. Margem de 3px de cada lado (total 6px).
-                                                          // Espaço interno para o thumb: 44 - 6 = 38px.
-                                                          // Movimento = Espaço interno - largura do thumb = 38px - 16px = 22px.
-                                                          // Ou (Largura total do track - largura do thumb - 2*margem_interna_thumb)
-                                                          // (44px - 16px - 2*3px) = 22px.
-                                                          // translate-x-[22px] seria o ideal, mas vamos usar um valor Tailwind ou um que funcione visualmente.
-                                                          // 'translate-x-[19px]' é um valor que pode funcionar bem visualmente para o tamanho do track w-11 (2.75rem) e thumb de 16px com margem de 3px.
-                                                          // (2.75rem * 16px/rem = 44px. Thumb 1rem. Margin 0.1875rem * 2 = 0.375rem)
-                                                          // Track inner usable width: 44px - (2*3px) = 38px. Thumb 16px. Travel = 38-16 = 22px.
-                                                          // translate-x-[22px]
-            }></div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 
 const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   chatInfo, onClose, panelWidthClass, currentUserId,
@@ -107,10 +37,10 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       onToggleBlockChat(chatInfo.id); 
     }
   };
-  const handleDeleteChatClick = () => { /* ...como antes... */
+  const handleDeleteChatClick = () => {
     if (window.confirm(`Tem a certeza que quer apagar a conversa com ${chatInfo.name}? Esta ação não pode ser desfeita.`)) { onDeleteChat(chatInfo.id); }
   };
-  const handleExitGroupClick = () => { /* ...como antes... */
+  const handleExitGroupClick = () => {
     if (window.confirm(`Tem a certeza que quer sair do grupo "${chatInfo.name}"?`)) { onExitGroup(chatInfo.id); }
   };
 
@@ -128,10 +58,11 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
       <div className="flex-1 overflow-y-auto chat-scrollbar">
         {/* Secção Avatar e Nome */}
         <section className="flex flex-col items-center p-6 text-center">
-          <img
-            src={chatInfo.avatarUrl || (contactUser?.avatarUrl || `https://placehold.co/150x150/CCCCCC/000000?text=${chatInfo.name.charAt(0)}`)}
-            alt={`${chatInfo.name} Avatar`}
-            className="h-32 w-32 rounded-full object-cover md:h-40 md:w-40"
+          <Avatar 
+            src={chatInfo.avatarUrl || contactUser?.avatarUrl}
+            name={chatInfo.name}
+            sizeClasses="h-32 w-32 md:h-40 md:w-40"
+            fallbackText={chatInfo.name.charAt(0)}
           />
           <h2 className="mt-4 text-xl font-semibold text-whatsapp-text-primary break-all">{chatInfo.name}</h2>
           {isGroup ? (
@@ -177,7 +108,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         <section>
           <InfoPanelMenuItem
             icon={chatInfo.isMuted ? faBell : faBellSlash}
-            text={chatInfo.isMuted ? "Notificações ativadas" : "Silenciar notificações"} // Texto pode ser mais claro
+            text={chatInfo.isMuted ? "Notificações ativadas" : "Silenciar notificações"}
             subtext={chatInfo.isMuted ? "Toque para silenciar" : "Toque para reativar som"}
             hasToggle={true}
             isToggled={!!chatInfo.isMuted}
@@ -198,10 +129,12 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
               <div className="max-h-60 overflow-y-auto chat-scrollbar">
                 {chatInfo.participants.map(participant => (
                   <div key={participant.id} className="flex cursor-pointer items-center p-3 px-5 hover:bg-whatsapp-active-chat">
-                    <img
-                      src={participant.avatarUrl || `https://placehold.co/40x40/CCCCCC/000000?text=${participant.name.charAt(0)}`}
-                      alt={participant.name}
-                      className="mr-4 h-10 w-10 rounded-full"
+                    <Avatar 
+                        src={participant.avatarUrl}
+                        name={participant.name}
+                        sizeClasses="h-10 w-10"
+                        className="mr-4"
+                        fallbackText={participant.name.charAt(0)}
                     />
                     <div className="flex-1">
                       <p className="text-sm text-whatsapp-text-primary">{participant.id === currentUserId ? "Você" : participant.name}</p>

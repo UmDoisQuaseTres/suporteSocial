@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faPaperclip, faEllipsisV, faArchive, faArrowUpFromBracket } from '@fortawesome/free-solid-svg-icons';
 import type { ActiveChat, Chat } // Adicionado Chat
 from '../../../types';
+import Avatar from '../../common/Avatar'; // Added import
 
 interface ChatHeaderProps {
   chat: ActiveChat;
@@ -41,11 +42,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chat, onToggleArchiveStatus, on
     <header className="flex h-[60px] items-center justify-between border-b border-gray-700/50 bg-whatsapp-header-bg p-3 text-whatsapp-text-primary">
       {/* Área clicável para nome e avatar */}
       <div className="flex flex-1 cursor-pointer items-center overflow-hidden" onClick={handleHeaderClick}>
-        <img
-          src={chat.avatarUrl || 'https://placehold.co/40x40/CCCCCC/000000?text=?'}
-          alt={`${chat.name} Avatar`}
-          className="mr-3 h-10 w-10 flex-shrink-0 rounded-full"
-          onError={(e) => (e.currentTarget.src = 'https://placehold.co/40x40/CCCCCC/000000?text=?')}
+        <Avatar 
+          src={chat.avatarUrl}
+          name={chat.name}
+          sizeClasses="h-10 w-10"
+          className="mr-3 flex-shrink-0"
+          fallbackText="?"
         />
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-medium">{chat.name}</h3>
