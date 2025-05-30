@@ -21,8 +21,17 @@ const Avatar: React.FC<AvatarProps> = ({
   const [currentSrc, setCurrentSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
 
-  const placeholderChar = (fallbackText || (name && name.length > 0 ? name.charAt(0).toUpperCase() : '?'));
-  const placeholderUrl = `https://placehold.co/100x100/CCCCCC/000000?text=${encodeURIComponent(placeholderChar)}`;
+  const generateInitials = (nameString: string): string => {
+    if (!nameString) return '?';
+    const parts = nameString.split(' ');
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  const placeholderFinalText = fallbackText || generateInitials(name);
+  const placeholderUrl = `https://placehold.co/100x100/CCCCCC/000000?text=${encodeURIComponent(placeholderFinalText)}`;
 
   useEffect(() => {
     setCurrentSrc(src);

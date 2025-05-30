@@ -22,7 +22,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
   trigger,
   items,
   menuPosition = 'right',
-  contentClasses = 'bg-whatsapp-header-bg border-gray-700/50',
+  contentClasses = 'bg-whatsapp-header-bg border border-whatsapp-divider',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -45,20 +45,42 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
       }
     };
 
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
     } else {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [isOpen]);
 
   return (
     <div className="relative">
-      <div ref={triggerRef} onClick={toggleDropdown} className="cursor-pointer">
+      <div 
+        ref={triggerRef} 
+        onClick={toggleDropdown} 
+        className="cursor-pointer" 
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleDropdown(e as any);
+          }
+        }}
+      >
         {trigger}
       </div>
       {isOpen && (
@@ -67,6 +89,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
           className={`absolute z-50 mt-2 w-56 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none py-1 ${contentClasses} ${
             menuPosition === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left'
           }`}
+          role="menu"
         >
           {items.map((item) => (
             <button
@@ -81,8 +104,9 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
                 ${item.isDestructive ? 'text-red-500 hover:bg-red-500/10' : 'text-whatsapp-text-primary hover:bg-whatsapp-active-chat'}
                 ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
+              role="menuitem"
             >
-              {item.icon && <FontAwesomeIcon icon={item.icon} className="mr-3 w-4" />}
+              {item.icon && <FontAwesomeIcon icon={item.icon} className="mr-3 text-base" />}
               {item.label}
             </button>
           ))}

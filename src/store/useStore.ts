@@ -1,7 +1,44 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { produce } from 'immer';
 import type { Chat, ActiveChat, Message, User, MessageStatus } from '../types';
-import { mockUsers, initialMockChats, initialMockMessages } from '../mockData';
+import { mockUsers, initialMockChats as originalInitialMockChats, initialMockMessages } from '../mockData';
+
+// Adjust initialMockChats to conform to Chat[] by adding messages and handling unreadCount
+const initialMockChats: Chat[] = originalInitialMockChats.map((chatOmitted, index) => ({
+  ...(chatOmitted as Omit<Chat, 'messages' | 'lastMessage' | 'lastActivity' | 'isArchived' | 'isMuted' | 'isPinned' | 'isMarkedUnread' | 'typingUserIds'>),
+  id: chatOmitted.id,
+  type: chatOmitted.type,
+  name: chatOmitted.name,
+  avatarUrl: chatOmitted.avatarUrl,
+  participants: chatOmitted.participants,
+  groupAdmins: chatOmitted.groupAdmins,
+  createdBy: chatOmitted.createdBy,
+  description: chatOmitted.description,
+  isBlocked: chatOmitted.isBlocked,
+  messages: [], // Add empty messages array to satisfy Chat type
+  lastMessage: null, // Initialize appropriately
+  lastActivity: Date.now() - Math.random() * 100000000, // Example, replace with actual logic if needed
+  unreadCount: index === 2 ? 1 : 0, // Provide a default for unreadCount
+  isPinned: index < 2,
+  isMarkedUnread: index === 2,
+  isArchived: false, // Default value
+  isMuted: false, // Default value
+  typingUserIds: [], // Default value
+}));
+
+interface ConfirmationDialogConfigState {
+  isOpen: boolean;
+  title: string;
+  message: string | React.ReactNode;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void; // This will be wrapped by the store action
+  onCancelAction?: () => void; // Optional action to run on explicit cancel, besides closing
+  isDestructive?: boolean;
+  confirmButtonVariant?: 'primary' | 'danger' | 'success' | 'warning';
+  hideCancelButton?: boolean;
+}
 
 // Define the state shape
 interface AppState {
@@ -27,7 +64,7 @@ interface AppState {
   archivedUserChats: () => Chat[];
   unreadInArchivedCount: () => number;
   availableContacts: () => User[];
-  currentFilteredChats: () => Chat[]; // New derived state
+  currentFilteredChats: () => Chat[];
 
   // Actions for Chat Management
   setAllChats: (chats: Chat[]) => void;
@@ -45,7 +82,7 @@ interface AppState {
   setShowStarredMessagesView: (show: boolean) => void;
   setShowMediaGalleryView: (show: boolean) => void;
   
-  resetAllSecondaryViews: () => void; // Helper for toggles
+  resetAllSecondaryViews: () => void;
 
   handleToggleArchivedView: () => void;
   handleToggleNewChatView: () => void;
@@ -53,23 +90,40 @@ interface AppState {
   handleToggleStarredMessagesView: () => void;
   handleToggleMediaGalleryView: () => void;
 
-  // More complex actions (Chat Management - signatures updated)
-  handleSelectChat: (chat: Chat) => void; // Removed UI params
+  // More complex actions
+  handleSelectChat: (chat: Chat) => void;
   handleSendMessage: (chatId: string, messageContent: {
     text?: string; imageUrl?: string; fileName?: string; audioUrl?: string; videoUrl?: string;
     duration?: number; mediaType?: 'image' | 'document' | 'audio' | 'video';
     replyToMessageId?: string; replyToMessagePreview?: string; replyToSenderName?: string;
-  }) => void; // Removed UI params
-  toggleArchiveChatStatus: (chatId: string) => void; // Removed UI params
+  }) => void;
+  toggleArchiveChatStatus: (chatId: string) => void;
   toggleMuteChat: (chatId: string) => void;
   handleToggleBlockChat: (chatId: string) => void;
-  handleDeleteChat: (chatId: string) => void; // Removed UI params
-  handleExitGroup: (chatId: string) => void; // Removed UI params
-  handleStartNewChat: (contact: User) => void; // Removed UI params
-  handleCreateGroup: (groupName: string, selectedContactIds: string[]) => void; // Removed UI params
+  handleDeleteChat: (chatId: string) => void;
+  handleExitGroup: (chatId: string) => void;
+  handleStartNewChat: (contact: User) => void;
+  handleCreateGroup: (groupName: string, selectedContactIds: string[]) => void;
   handleClearChatMessages: (chatId: string) => void;
   handleForwardMessage: (originalMessage: Message, targetChatIds: string[]) => void;
   handleToggleStarMessage: (messageId: string) => void;
+  togglePinChat: (chatId: string) => void;
+  toggleMarkUnread: (chatId: string) => void;
+  startTyping: (chatId: string, userId: string) => void;
+  stopTyping: (chatId: string, userId: string) => void;
+  updateGroupDescription: (chatId: string, newDescription: string) => void;
+  addParticipantsToGroup: (chatId: string, userIdsToAdd: string[]) => void;
+  removeParticipantFromGroup: (chatId: string, userIdToRemove: string) => void;
+  promoteParticipantToAdmin: (chatId: string, userIdToPromote: string) => void;
+  demoteAdminToParticipant: (chatId: string, userIdToDemote: string) => void;
+  updateGroupNameAndDescription: (chatId: string, newName: string | undefined, newDescription: string | undefined) => void;
+  updateGroupAvatar: (chatId: string, newAvatarUrl: string) => void;
+
+  confirmationDialog: ConfirmationDialogConfigState | null;
+
+  showConfirmationDialog: (config: Omit<ConfirmationDialogConfigState, 'isOpen' | 'onCancelAction'> & { onConfirm: () => void; onCancelAction?: () => void }) => void;
+  hideConfirmationDialog: () => void;
+  confirmConfirmationDialog: () => void;
 }
 
 // Create the store with persistence
@@ -77,7 +131,7 @@ const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       // Initial Chat Management State
-      allChats: initialMockChats,
+      allChats: initialMockChats, // Use the corrected initialMockChats
       activeChat: null,
       messages: initialMockMessages,
       currentUserId: 'currentUser',
@@ -100,14 +154,34 @@ const useStore = create<AppState>()(
       availableContacts: () => Object.values(mockUsers).filter(user => user.id !== get().currentUserId),
       
       currentFilteredChats: () => {
-        const { searchTerm, showNewChatView, showCreateGroupView, showStarredMessagesView, showMediaGalleryView, showArchivedView, archivedUserChats, activeUserChats } = get();
+        const { 
+          searchTerm, 
+          showNewChatView, 
+          showCreateGroupView, 
+          showStarredMessagesView, 
+          showMediaGalleryView, 
+          showArchivedView, 
+          archivedUserChats, // This already returns Chat[] sorted by lastActivity implicitly by allChats sort
+          // activeUserChats // We'll call this and then further process for pinning
+        } = get();
+
         const listToDisplayInitially = (() => {
-            if (showArchivedView) return archivedUserChats();
+            if (showArchivedView) return archivedUserChats(); // Archived chats are not affected by pinning in this logic
             if (showNewChatView) return []; 
             if (showCreateGroupView) return []; 
             if (showStarredMessagesView) return [];
             if (showMediaGalleryView) return [];
-            return activeUserChats();
+            
+            // Process active chats for pinning
+            const activeChats = get().allChats.filter(chat => !chat.isArchived);
+            const pinnedChats = activeChats
+              .filter(chat => chat.isPinned)
+              .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
+            const otherActiveChats = activeChats
+              .filter(chat => !chat.isPinned)
+              .sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
+            
+            return [...pinnedChats, ...otherActiveChats];
           })();
 
         if (searchTerm && !showNewChatView && !showCreateGroupView && !showStarredMessagesView && !showMediaGalleryView) {
@@ -328,60 +402,69 @@ const useStore = create<AppState>()(
         get().handleDeleteChat(chatId); // Call updated handleDeleteChat
       },
 
-      handleStartNewChat: (contact) => { // Removed UI params
-        const existingChat = get().allChats.find(c => c.type === 'user' && c.participants?.some(p => p.id === contact.id));
-        let chatToSelect: Chat;
-
-        if (existingChat) { 
-            chatToSelect = existingChat;
-        } else {
-          const newChatId = contact.id;
-          const newChatData: Chat = {
-            id: newChatId, type: 'user', name: contact.name, avatarUrl: contact.avatarUrl,
-            lastMessage: undefined, unreadCount: 0, lastActivity: Date.now(),
-            isArchived: false, isMuted: false, isBlocked: false, 
-            participants: [mockUsers[get().currentUserId], contact],
-          };
-          set(state => ({
-              allChats: [newChatData, ...state.allChats].sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0)),
-              messages: { ...state.messages, [newChatId]: [] }
-          }));
-          chatToSelect = newChatData;
-        }
-        const chatMessages = get().messages[chatToSelect.id] || [];
-        set({ activeChat: { ...chatToSelect, messages: chatMessages } });
-        set({ showNewChatView: false, showContactInfoPanel: false }); // Update internal UI state
-      },
-
-      handleCreateGroup: (groupName, selectedContactIds) => { // Removed UI params
-        set({ isCreatingGroup: true });
-        const newGroupId = `group-${Date.now()}`;
-        const currentUser = mockUsers[get().currentUserId];
-        const selectedUsers = selectedContactIds.map(id => mockUsers[id]).filter(Boolean) as User[];
-        
-        if (!currentUser) {
-          console.error("Current user not found for group creation.");
-          set({ isCreatingGroup: false });
+      handleStartNewChat: (contact) => {
+        const existingChat = get().allChats.find(chat => 
+          chat.type === 'user' && chat.participants?.some(p => p.id === contact.id)
+        );
+        if (existingChat) {
+          get().handleSelectChat(existingChat);
           return;
         }
+
+        const newChat: Chat = {
+          id: `chat-${Date.now()}-${contact.id}`,
+          type: 'user',
+          name: contact.name,
+          avatarUrl: contact.avatarUrl,
+          participants: [mockUsers[get().currentUserId], contact],
+          messages: [], // Initialize with empty messages array
+          lastMessage: null,
+          unreadCount: 0,
+          lastActivity: Date.now(),
+          isArchived: false,
+          isMuted: false,
+          isPinned: false,
+          isMarkedUnread: false,
+          isBlocked: false,
+        };
+        set(state => ({
+          allChats: [newChat, ...state.allChats].sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0))
+        }));
+        get().handleSelectChat(newChat);
+        get().resetAllSecondaryViews();
+      },
+
+      handleCreateGroup: (groupName, selectedContactIds) => {
+        if (!groupName.trim() || selectedContactIds.length === 0) return;
+
+        const currentUser = mockUsers[get().currentUserId];
+        const selectedUsers = selectedContactIds.map(id => mockUsers[id]).filter(Boolean);
         const participants = [currentUser, ...selectedUsers];
+
         const newGroupChat: Chat = {
-          id: newGroupId, type: 'group', name: groupName,
-          avatarUrl: `https://placehold.co/100x100/CCCCCC/000000?text=${groupName.substring(0,2).toUpperCase()}`,
-          participants: participants, lastMessage: undefined, unreadCount: 0,
-          lastActivity: Date.now(), isArchived: false, isMuted: false,
+          id: `group-${Date.now()}`,
+          type: 'group',
+          name: groupName,
+          avatarUrl: 'https://placehold.co/50x50/3498DB/FFFFFF?text=G', // Placeholder group avatar
+          participants: participants,
+          messages: [], // Initialize with empty messages array
+          lastMessage: null,
+          unreadCount: 0,
+          lastActivity: Date.now(),
+          isArchived: false,
+          isMuted: false,
+          isPinned: false,
+          isMarkedUnread: false,
+          groupAdmins: [get().currentUserId],
+          createdBy: get().currentUserId,
         };
 
-        setTimeout(() => {
-          set(state => ({
-              allChats: [newGroupChat, ...state.allChats].sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0)),
-              messages: { ...state.messages, [newGroupId]: [] },
-              activeChat: { ...newGroupChat, messages: [] }, 
-              viewingContactInfoFor: null,
-              isCreatingGroup: false,
-              showCreateGroupView: false, // Update internal UI state
-          }));
-        }, 2000);
+        set(state => ({
+          allChats: [newGroupChat, ...state.allChats].sort((a,b) => (b.lastActivity||0) - (a.lastActivity||0)),
+          isCreatingGroup: false, // Reset flag after creation
+        }));
+        get().handleSelectChat(newGroupChat);
+        get().resetAllSecondaryViews(); 
       },
       
       handleClearChatMessages: (chatId: string) => {
@@ -435,26 +518,274 @@ const useStore = create<AppState>()(
       },
 
       handleToggleStarMessage: (messageId: string) => {
-        set(state => {
-          const updatedMessages: { [chatId: string]: Message[] } = {};
-          for (const chatId in state.messages) {
-            updatedMessages[chatId] = state.messages[chatId].map(msg => 
-              msg.id === messageId ? { ...msg, isStarred: !msg.isStarred } : msg
-            );
+        set(produce((state: AppState) => {
+          // Find which chat the message belongs to first
+          let chatIdToUpdate: string | null = null;
+          let messageIndexInChat: number = -1;
+
+          // Check activeChat first, as it's a common case
+          if (state.activeChat && state.messages[state.activeChat.id]) {
+            const msgIdx = state.messages[state.activeChat.id].findIndex(m => m.id === messageId);
+            if (msgIdx !== -1) {
+              chatIdToUpdate = state.activeChat.id;
+              messageIndexInChat = msgIdx;
+            }
+          }
+
+          // If not found in activeChat's messages, search all chats' messages
+          // This is important if the action is triggered from a context outside the active chat (e.g., global search results later)
+          if (!chatIdToUpdate) {
+            for (const id in state.messages) {
+              const msgIdx = state.messages[id].findIndex(m => m.id === messageId);
+              if (msgIdx !== -1) {
+                chatIdToUpdate = id;
+                messageIndexInChat = msgIdx;
+                break;
+              }
+            }
           }
           
-          const newActiveChat = (state.activeChat && state.activeChat.messages.some(msg => msg.id === messageId))
-            ? { ...state.activeChat, messages: state.activeChat.messages.map(msg => msg.id === messageId ? { ...msg, isStarred: !msg.isStarred } : msg )}
-            : state.activeChat;
+          if (chatIdToUpdate && messageIndexInChat !== -1) {
+            const targetMessage = state.messages[chatIdToUpdate][messageIndexInChat];
+            targetMessage.isStarred = !targetMessage.isStarred;
 
-          const newAllChats = state.allChats.map(chat => 
-            (chat.lastMessage?.id === messageId) ? 
-            { ...chat, lastMessage: { ...chat.lastMessage, isStarred: !chat.lastMessage.isStarred } } : chat
-          );
-          
-          return { messages: updatedMessages, activeChat: newActiveChat, allChats: newAllChats };
+            // If the updated message is in the active chat, update activeChat.messages as well
+            if (state.activeChat && state.activeChat.id === chatIdToUpdate) {
+              const activeMsgIdx = state.activeChat.messages.findIndex(m => m.id === messageId);
+              if (activeMsgIdx !== -1) {
+                state.activeChat.messages[activeMsgIdx].isStarred = targetMessage.isStarred;
+              }
+            }
+            // No need to update allChats unless isStarred affects sorting or lastMessage display,
+            // which it currently doesn't seem to.
+          } else {
+            console.warn(`handleToggleStarMessage: Message with ID ${messageId} not found in any chat.`);
+          }
+        }));
+      },
+
+      // Pinning and Marking Unread
+      togglePinChat: (chatId) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId);
+          if (chatIndex !== -1) {
+            state.allChats[chatIndex].isPinned = !state.allChats[chatIndex].isPinned;
+          }
+          // Re-sorting or relying on the getter to re-sort will be handled by currentFilteredChats
+        }));
+      },
+      toggleMarkUnread: (chatId) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId);
+          if (chatIndex !== -1) {
+            state.allChats[chatIndex].isMarkedUnread = !state.allChats[chatIndex].isMarkedUnread;
+            if (state.allChats[chatIndex].isMarkedUnread && (state.allChats[chatIndex].unreadCount || 0) === 0) {
+              // Visual cue, actual count is separate
+            } else if (!state.allChats[chatIndex].isMarkedUnread) {
+              state.allChats[chatIndex].unreadCount = 0;
+            }
+          }
+        }));
+      },
+
+      // Typing Indicators
+      startTyping: (chatId, userId) => {
+        console.log(`${userId} started typing in ${chatId}`);
+      },
+      stopTyping: (chatId, userId) => {
+        console.log(`${userId} stopped typing in ${chatId}`);
+      },
+
+      // Update Group Description
+      updateGroupDescription: (chatId, newDescription) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex !== -1) {
+            state.allChats[chatIndex].description = newDescription;
+            if (state.activeChat && state.activeChat.id === chatId) {
+              state.activeChat.description = newDescription;
+            }
+            if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+              state.viewingContactInfoFor.description = newDescription;
+            }
+          }
+        }));
+      },
+
+      // New action implementation
+      addParticipantsToGroup: (chatId, userIdsToAdd) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex !== -1) {
+            const groupChat = state.allChats[chatIndex];
+            const existingParticipantIds = groupChat.participants?.map(p => p.id) || [];
+            const usersToAddObjects = userIdsToAdd
+              .filter(id => !existingParticipantIds.includes(id))
+              .map(id => mockUsers[id])
+              .filter(Boolean) as User[];
+            if (usersToAddObjects.length > 0) {
+              groupChat.participants = [...(groupChat.participants || []), ...usersToAddObjects];
+              if (state.activeChat && state.activeChat.id === chatId) {
+                state.activeChat.participants = groupChat.participants;
+              }
+              if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+                state.viewingContactInfoFor.participants = groupChat.participants;
+              }
+            }
+          }
+        }));
+      },
+
+      // New action implementation
+      removeParticipantFromGroup: (chatId, userIdToRemove) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex !== -1) {
+            const groupChat = state.allChats[chatIndex];
+            
+            // Remove from participants list
+            const updatedParticipants = groupChat.participants?.filter(p => p.id !== userIdToRemove) || [];
+            groupChat.participants = updatedParticipants;
+
+            // Remove from admins list if present
+            if (groupChat.groupAdmins?.includes(userIdToRemove)) {
+              groupChat.groupAdmins = groupChat.groupAdmins.filter(adminId => adminId !== userIdToRemove);
+            }
+
+            // Also update activeChat and viewingContactInfoFor if they are this group
+            if (state.activeChat && state.activeChat.id === chatId) {
+              state.activeChat.participants = updatedParticipants;
+              state.activeChat.groupAdmins = groupChat.groupAdmins;
+            }
+            if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+              state.viewingContactInfoFor.participants = updatedParticipants;
+              state.viewingContactInfoFor.groupAdmins = groupChat.groupAdmins;
+            }
+            
+             if (updatedParticipants.length === 0) {
+                console.warn(`Group ${chatId} has no participants left after removal.`);
+             }
+          }
+        }));
+      },
+
+      promoteParticipantToAdmin: (chatId, userIdToPromote) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex === -1) return;
+
+          const groupChat = state.allChats[chatIndex];
+          const isParticipant = groupChat.participants?.some(p => p.id === userIdToPromote);
+          const alreadyAdmin = groupChat.groupAdmins?.includes(userIdToPromote);
+
+          if (isParticipant && !alreadyAdmin) {
+            groupChat.groupAdmins = [...(groupChat.groupAdmins || []), userIdToPromote];
+
+            if (state.activeChat && state.activeChat.id === chatId) {
+              state.activeChat.groupAdmins = groupChat.groupAdmins;
+            }
+            if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+              state.viewingContactInfoFor.groupAdmins = groupChat.groupAdmins;
+            }
+          }
+        }));
+      },
+
+      demoteAdminToParticipant: (chatId, userIdToDemote) => {
+        set(produce((state: AppState) => {
+          const currentUserId = get().currentUserId;
+          if (userIdToDemote === currentUserId) {
+            console.warn("User cannot demote themselves via this action.");
+            return;
+          }
+
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex === -1) return;
+
+          const groupChat = state.allChats[chatIndex];
+          if (!groupChat.groupAdmins?.includes(userIdToDemote)) return;
+
+          if (groupChat.groupAdmins.length === 1 && groupChat.groupAdmins[0] === userIdToDemote) {
+            console.warn(`Demoting the last admin (${userIdToDemote}) of group ${chatId}.`);
+          }
+
+          groupChat.groupAdmins = groupChat.groupAdmins.filter(adminId => adminId !== userIdToDemote);
+
+          if (state.activeChat && state.activeChat.id === chatId) {
+            state.activeChat.groupAdmins = groupChat.groupAdmins;
+          }
+          if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+            state.viewingContactInfoFor.groupAdmins = groupChat.groupAdmins;
+          }
+        }));
+      },
+
+      updateGroupNameAndDescription: (chatId, newName, newDescription) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex !== -1) {
+            if (newName !== undefined) {
+              state.allChats[chatIndex].name = newName;
+            }
+            if (newDescription !== undefined) {
+              state.allChats[chatIndex].description = newDescription;
+            }
+            
+            if (state.activeChat && state.activeChat.id === chatId) {
+              if (newName !== undefined) state.activeChat.name = newName;
+              if (newDescription !== undefined) state.activeChat.description = newDescription;
+            }
+            if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+              if (newName !== undefined) state.viewingContactInfoFor.name = newName;
+              if (newDescription !== undefined) state.viewingContactInfoFor.description = newDescription;
+            }
+          }
+        }));
+      },
+
+      updateGroupAvatar: (chatId, newAvatarUrl) => {
+        set(produce((state: AppState) => {
+          const chatIndex = state.allChats.findIndex(c => c.id === chatId && c.type === 'group');
+          if (chatIndex !== -1) {
+            state.allChats[chatIndex].avatarUrl = newAvatarUrl;
+            if (state.activeChat && state.activeChat.id === chatId) {
+              state.activeChat.avatarUrl = newAvatarUrl;
+            }
+            if (state.viewingContactInfoFor && state.viewingContactInfoFor.id === chatId) {
+              state.viewingContactInfoFor.avatarUrl = newAvatarUrl;
+            }
+          }
+        }));
+      },
+
+      confirmationDialog: null,
+
+      showConfirmationDialog: (config) => {
+        set({
+          confirmationDialog: {
+            ...config,
+            isOpen: true,
+            // onConfirm is already part of config
+          }
         });
       },
+
+      hideConfirmationDialog: () => {
+        const currentDialog = get().confirmationDialog;
+        if (currentDialog && currentDialog.onCancelAction) {
+          currentDialog.onCancelAction();
+        }
+        set({ confirmationDialog: null });
+      },
+
+      confirmConfirmationDialog: () => {
+        const currentDialog = get().confirmationDialog;
+        if (currentDialog && currentDialog.onConfirm) {
+          currentDialog.onConfirm();
+        }
+        set({ confirmationDialog: null }); // Hide after confirm
+      },
+
     }),
     {
       name: 'whatsapp-store', // unique name for localStorage key
@@ -484,5 +815,74 @@ export const useChatViewState = () => useStore((state) => ({
   showContactInfoPanel: state.showContactInfoPanel,
   searchTerm: state.searchTerm,
 }));
+
+// --- Typing Simulation ---
+// This is a simple mock simulation for demonstration purposes.
+// In a real app, this would be driven by WebSocket events.
+let typingIntervals: Record<string, number> = {};
+const SIMULATE_TYPING = true; // Set to false to disable
+
+if (SIMULATE_TYPING) {
+  const setupTypingSimulation = () => {
+    const storeState = useStore.getState();
+    const nonArchivedChats = storeState.allChats.filter(c => !c.isArchived);
+    const currentUserId = storeState.currentUserId;
+
+    // Clear any existing intervals
+    Object.values(typingIntervals).forEach(clearInterval);
+    typingIntervals = {};
+
+    nonArchivedChats.forEach(chat => {
+      // Participants excluding the current user
+      const otherParticipants = chat.participants?.filter(p => p.id !== currentUserId) || [];
+      
+      if (otherParticipants.length > 0) {
+        typingIntervals[chat.id] = setInterval(() => {
+          const store = useStore.getState(); // Get fresh state
+          const chatStillExists = store.allChats.find(c => c.id === chat.id);
+          if (!chatStillExists) {
+            clearInterval(typingIntervals[chat.id]);
+            delete typingIntervals[chat.id];
+            return;
+          }
+
+          otherParticipants.forEach(participant => {
+            // Randomly decide if this participant starts/stops typing
+            if (Math.random() < 0.15) { // Chance to start typing
+              if (!chatStillExists.typingUserIds?.includes(participant.id)) {
+                console.log(`SIM: ${participant.name} starts typing in ${chat.name}`);
+                store.startTyping(chat.id, participant.id);
+
+                // Simulate typing for a few seconds, then stop
+                setTimeout(() => {
+                  const currentStore = useStore.getState();
+                  const stillExistsAndTyping = currentStore.allChats.find(c=>c.id === chat.id)?.typingUserIds?.includes(participant.id);
+                  if (stillExistsAndTyping) {
+                    console.log(`SIM: ${participant.name} stops typing in ${chat.name}`);
+                    currentStore.stopTyping(chat.id, participant.id);
+                  }
+                }, Math.random() * 4000 + 3000); // Typing for 3-7 seconds
+              }
+            } else if (Math.random() < 0.05) { // Smaller chance to randomly stop if already typing
+                 if (chatStillExists.typingUserIds?.includes(participant.id)) {
+                    console.log(`SIM: ${participant.name} (randomly) stops typing in ${chat.name}`);
+                    store.stopTyping(chat.id, participant.id);
+                 }
+            }
+          });
+        }, 5000); // Check every 5 seconds for each chat
+      }
+    });
+  };
+
+  // Initial setup
+  // Timeout to ensure store is initialized
+  setTimeout(setupTypingSimulation, 3000); 
+
+  // Optionally, re-run simulation setup if chats change significantly (e.g., after new chat)
+  // This could be done by subscribing to store changes, but for simplicity, we'll keep it initial.
+  // useStore.subscribe(state => state.allChats, setupTypingSimulation); // Example of subscription
+}
+// --- End Typing Simulation ---
 
 export default useStore; 

@@ -44,8 +44,8 @@ const MainContent: React.FC<MainContentProps> = ({
   clearMessageToHighlight // Added
 }) => {
   return (
-    // Aplicando a classe de largura dinâmica
-    <main className={`flex flex-col bg-whatsapp-chat-bg ${mainContentWidthClass}`}>
+    // Aplicando a classe de largura dinâmica e o novo padrão de fundo
+    <main className={`flex flex-col bg-whatsapp-chat-bg bg-whatsapp-chat-pattern ${mainContentWidthClass}`}>
       {activeChat ? (
         <ChatWindow
           chat={activeChat}

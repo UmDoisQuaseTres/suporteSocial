@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faSmile, faPlus, faMicrophone, faPaperPlane, faLock,
+  faSmile, faPaperclip, faMicrophone, faPaperPlane, faLock,
   faFileAlt, faCamera, faImage,
   faStopCircle, faTrashAlt,
   faVideo
@@ -79,6 +79,28 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const attachmentMenuRef = useRef<HTMLDivElement>(null); 
   const attachmentButtonRef = useRef<HTMLButtonElement>(null); 
 
+  // Helper to add reply context and call onSendMessage
+  const sendMessageWithContext = (messageSpecificContent: Omit<Parameters<MessageInputProps['onSendMessage']>[1], 'replyToMessageId' | 'replyToMessagePreview' | 'replyToSenderName'>) => {
+    const messageContent: Parameters<MessageInputProps['onSendMessage']>[1] = {
+      ...messageSpecificContent,
+    };
+    if (replyingTo) {
+      messageContent.replyToMessageId = replyingTo.id;
+      messageContent.replyToMessagePreview = replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia');
+      // Prefer senderName from replyingTo itself if available (e.g. if it was populated by current user's name from a reliable source)
+      // Fallback to deriving based on senderId, then a generic placeholder.
+      messageContent.replyToSenderName = replyingTo.userName || 
+                                        (replyingTo.senderId === 'currentUser' ? 'Você' : 
+                                        (replyingToSenderNamePreview || 'Usuário Desconhecido')); 
+                                        // Note: Finding participant name from chat.participants would be ideal here if senderId is not currentUser
+    }
+    onSendMessage(chatId, messageContent);
+    setInputText('');
+    if (onCancelReply) onCancelReply();
+    setShowEmojiPicker(false);
+    setShowAttachmentMenu(false);
+  };
+
   const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => { setInputText(event.target.value); adjustTextareaHeight(); };
   const adjustTextareaHeight = () => { if (inputRef.current) { inputRef.current.style.height = 'auto'; inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; } };
   useEffect(() => { adjustTextareaHeight(); }, [inputText]);
@@ -97,19 +119,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
       stopRecordingAndSend();
       return;
     }
-    if (inputText.trim() || replyingTo) { // Allow sending even if only replying (e.g. forwarding a message with a reply)
-      onSendMessage(chatId, { 
-        text: inputText.trim() || undefined, 
-        ...(replyingTo && { // Add reply context if present
-          replyToMessageId: replyingTo.id,
-          replyToMessagePreview: replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia'),
-          replyToSenderName: replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário') // Fallback if preview name not available
-        })
-      }); 
-      setInputText(''); 
-      if (onCancelReply) onCancelReply(); // Clear reply state after sending
-      setShowEmojiPicker(false); 
-      setShowAttachmentMenu(false); 
+    if (inputText.trim() || replyingTo) {
+      sendMessageWithContext({ text: inputText.trim() || undefined });
     } 
   };
   const handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSend(); } };
@@ -144,26 +155,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const imageUrl = reader.result as string;
-        onSendMessage(chatId, { 
-          imageUrl, 
-          text: inputText.trim() || undefined, 
-          mediaType: 'image',
-          ...(replyingTo && { 
-            replyToMessageId: replyingTo.id,
-            replyToMessagePreview: replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia'),
-            replyToSenderName: replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário')
-          })
-        });
-        setInputText(''); 
-        if (onCancelReply) onCancelReply();
-        setShowAttachmentMenu(false); 
+        sendMessageWithContext({ imageUrl: reader.result as string, text: inputText.trim() || undefined, mediaType: 'image' });
       };
       reader.readAsDataURL(file);
     }
-    if (event.target) {
-      event.target.value = '';
-    }
+    if (event.target) event.target.value = '';
   };
 
   const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,67 +172,25 @@ const MessageInput: React.FC<MessageInputProps> = ({
         videoElement.preload = 'metadata';
         videoElement.onloadedmetadata = () => {
           window.URL.revokeObjectURL(videoElement.src); 
-          const duration = videoElement.duration;
-          onSendMessage(chatId, { 
-            videoUrl, 
-            text: inputText.trim() || undefined, 
-            mediaType: 'video', 
-            duration, 
-            ...(replyingTo && { 
-              replyToMessageId: replyingTo.id,
-              replyToMessagePreview: replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia'),
-              replyToSenderName: replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário')
-            })
-          });
-          setInputText('');
-          if (onCancelReply) onCancelReply();
-          setShowAttachmentMenu(false);
+          sendMessageWithContext({ videoUrl, text: inputText.trim() || undefined, mediaType: 'video', duration: videoElement.duration });
         };
         videoElement.onerror = () => {
           console.error("Error loading video metadata for duration.");
-          onSendMessage(chatId, { 
-            videoUrl, 
-            text: inputText.trim() || undefined, 
-            mediaType: 'video', 
-            ...(replyingTo && { 
-              replyToMessageId: replyingTo.id,
-              replyToMessagePreview: replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia'),
-              replyToSenderName: replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário')
-            })
-          });
-          setInputText('');
-          if (onCancelReply) onCancelReply();
-          setShowAttachmentMenu(false);
+          sendMessageWithContext({ videoUrl, text: inputText.trim() || undefined, mediaType: 'video' });
         }
         videoElement.src = URL.createObjectURL(file); 
       };
       reader.readAsDataURL(file); 
     }
-    if (event.target) {
-      event.target.value = '';
-    }
+    if (event.target) event.target.value = '';
   };
 
   const handleDocumentSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      onSendMessage(chatId, { 
-        fileName: file.name, 
-        text: inputText.trim() || undefined, 
-        mediaType: 'document',
-        ...(replyingTo && { 
-          replyToMessageId: replyingTo.id,
-          replyToMessagePreview: replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia'),
-          replyToSenderName: replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário')
-        })
-      });
-      setInputText(''); 
-      if (onCancelReply) onCancelReply();
-      setShowAttachmentMenu(false); 
+      sendMessageWithContext({ fileName: file.name, text: inputText.trim() || undefined, mediaType: 'document' });
     }
-    if (event.target) {
-      event.target.value = '';
-    }
+    if (event.target) event.target.value = '';
   };
 
   const handleAttachmentOptionClick = (option: string) => {
@@ -274,18 +228,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' }); 
         const audioUrl = URL.createObjectURL(audioBlob);
-        const finalDuration = recordingDuration;
-        onSendMessage(chatId, { 
-          audioUrl, 
-          mediaType: 'audio', 
-          duration: finalDuration,
-          ...(replyingTo && { 
-            replyToMessageId: replyingTo.id,
-            replyToMessagePreview: replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia'),
-            replyToSenderName: replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário')
-          })
-        });
-        if (onCancelReply) onCancelReply();
+        sendMessageWithContext({ audioUrl, mediaType: 'audio', duration: recordingDuration });
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -314,16 +257,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop()); 
-        mediaRecorderRef.current.onstop = null; 
-        mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop(); // This will trigger onstop, but we won't send
     }
-    setIsRecording(false);
-    if(recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    setRecordingStartTime(null);
-    setRecordingDuration(0);
+    // Clean up stream tracks immediately
+    if (mediaRecorderRef.current) {
+        const stream = mediaRecorderRef.current.stream;
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    }
+    mediaRecorderRef.current = null;
     audioChunksRef.current = [];
+    setIsRecording(false);
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    setRecordingDuration(0);
+    setRecordingStartTime(null);
+    setInputText(''); // Clear any text that might have been typed before recording
   };
 
   useEffect(() => {
@@ -366,12 +316,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   if (isChatBlocked) {
     return (
-      <footer className="flex flex-col items-center justify-center space-y-1 border-t border-gray-700/50 bg-whatsapp-header-bg p-3 text-center">
+      <footer className="flex flex-col items-center justify-center space-y-1 border-t border-whatsapp-divider bg-whatsapp-header-bg p-3 text-center">
         <FontAwesomeIcon icon={faLock} className="text-xl text-whatsapp-text-secondary" />
-        <p className="text-sm text-whatsapp-text-secondary">Você bloqueou este contacto.</p>
+        <p className="text-sm text-whatsapp-text-secondary">Você não pode enviar mensagens para este contato porque o bloqueou.</p>
         {onOpenContactInfo && (
-          <button onClick={onOpenContactInfo} className="mt-1 text-xs text-teal-400 hover:text-teal-300 focus:outline-none">
-            Toque para ver os dados do contacto e desbloquear.
+          <button onClick={onOpenContactInfo} className="mt-1 text-xs text-whatsapp-light-green hover:text-whatsapp-green focus:outline-none focus:ring-1 focus:ring-whatsapp-light-green rounded-sm">
+            Ver dados do contato
           </button>
         )}
       </footer>
@@ -379,19 +329,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
   }
 
   return (
-    <footer className="relative flex flex-col border-t border-gray-700/50 bg-whatsapp-header-bg">
+    <footer className="relative flex flex-col border-t border-whatsapp-divider bg-whatsapp-header-bg">
       {replyingTo && onCancelReply && replyingToSenderNamePreview && (
         <div className="px-2 pt-2">
           <ReplyPreview 
             repliedMessageText={replyingTo.text || (replyingTo.mediaType ? replyingTo.mediaType.charAt(0).toUpperCase() + replyingTo.mediaType.slice(1) : 'Mídia')}
-            repliedMessageSenderName={replyingToSenderNamePreview} 
+            repliedMessageSenderName={replyingTo.userName || replyingToSenderNamePreview || (replyingTo.senderId === 'currentUser' ? 'Você' : 'Usuário')} 
             isOutgoingBubble={false} 
             onCancelReply={onCancelReply}
             isContextInInput={true}
           />
         </div>
       )}
-      <div className="flex items-end space-x-2 p-2 md:space-x-3">
+      <div className="flex items-end space-x-1 p-2 md:space-x-2">
         <input
           type="file"
           accept="image/*"
@@ -414,12 +364,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onChange={handleDocumentSelect}
         />
         {showAttachmentMenu && (
-          <div ref={attachmentMenuRef} className="absolute bottom-full mb-2 left-0 z-20 bg-whatsapp-header-bg p-3 rounded-lg shadow-xl border border-gray-700/50">
+          <div ref={attachmentMenuRef} className="absolute bottom-full mb-2 left-0 z-20 bg-whatsapp-input-bg p-3 rounded-lg shadow-xl border border-whatsapp-divider">
             <div className="grid grid-cols-3 gap-3">
-              <AttachmentMenuItem icon={faFileAlt} text="Documento" colorClass="bg-purple-500" onClick={() => handleAttachmentOptionClick('Documento')} />
-              <AttachmentMenuItem icon={faCamera} text="Câmera" colorClass="bg-red-500" onClick={() => handleAttachmentOptionClick('Câmera')} />
-              <AttachmentMenuItem icon={faImage} text="Galeria" colorClass="bg-pink-500" onClick={() => handleAttachmentOptionClick('Galeria')} />
-              <AttachmentMenuItem icon={faVideo} text="Vídeo" colorClass="bg-orange-500" onClick={() => handleAttachmentOptionClick('Vídeo')} /> 
+              <AttachmentMenuItem icon={faFileAlt} text="Documento" colorClass="bg-purple-600" onClick={() => handleAttachmentOptionClick('Documento')} />
+              <AttachmentMenuItem icon={faCamera} text="Câmera" colorClass="bg-red-600" onClick={() => handleAttachmentOptionClick('Câmera')} />
+              <AttachmentMenuItem icon={faImage} text="Galeria" colorClass="bg-pink-600" onClick={() => handleAttachmentOptionClick('Galeria')} />
+              <AttachmentMenuItem icon={faVideo} text="Vídeo" colorClass="bg-orange-600" onClick={() => handleAttachmentOptionClick('Vídeo')} /> 
             </div>
           </div>
         )}
@@ -429,54 +379,63 @@ const MessageInput: React.FC<MessageInputProps> = ({
               onEmojiClick={handleEmojiClick} autoFocusSearch={false}
               theme={Theme.DARK} emojiStyle={EmojiStyle.NATIVE}
               lazyLoadEmojis={true} height={350} width={320} 
+              searchPlaceholder="Procurar emoji"
+              previewConfig={{showPreview: false}}
             />
           </div>
         )}
-        <button
-          ref={attachmentButtonRef} 
-          title="Anexar"
-          onClick={toggleAttachmentMenu}
-          className="attachment-toggle-button p-2 text-lg text-whatsapp-icon hover:text-gray-200"
-        >
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
-        <button
-          title="Emojis"
-          onClick={toggleEmojiPicker}
-          className="emoji-toggle-button p-2 text-lg text-whatsapp-icon hover:text-gray-200"
-        >
-          <FontAwesomeIcon icon={faSmile} />
-        </button>
+        {!isRecording && (
+          <>
+            <button
+              ref={attachmentButtonRef} 
+              title="Anexar"
+              onClick={toggleAttachmentMenu}
+              className="attachment-toggle-button h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-full text-whatsapp-icon hover:bg-whatsapp-input-bg"
+            >
+              <FontAwesomeIcon icon={faPaperclip} className="text-xl" />
+            </button>
+            <button
+              title="Emojis"
+              onClick={toggleEmojiPicker}
+              className="emoji-toggle-button h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-full text-whatsapp-icon hover:bg-whatsapp-input-bg"
+            >
+              <FontAwesomeIcon icon={faSmile} className="text-xl" />
+            </button>
+          </>
+        )}
         <textarea
           ref={inputRef} value={inputText} onChange={handleInputChange}
-          onKeyPress={handleKeyPress} placeholder="Digite uma mensagem"
-          className="message-input-scrollbar max-h-24 flex-1 resize-none overflow-y-auto rounded-lg bg-whatsapp-input-bg px-4 py-2 text-sm text-whatsapp-text-primary placeholder-whatsapp-text-secondary focus:outline-none"
+          onKeyPress={handleKeyPress} placeholder={isRecording ? "" : "Digite uma mensagem"}
+          className={`message-input-scrollbar max-h-24 flex-1 resize-none overflow-y-auto rounded-lg bg-whatsapp-input-bg px-3 py-2.5 text-sm text-whatsapp-text-primary placeholder-whatsapp-text-secondary focus:outline-none focus:ring-0 min-h-[40px] ${isRecording ? 'hidden' : ''}`}
           rows={1}
           onClick={() => { setShowEmojiPicker(false); setShowAttachmentMenu(false); }}
+          disabled={isRecording}
         />
-        {isRecording ? (
-          <div className="flex flex-1 items-center space-x-3 text-sm text-whatsapp-text-secondary pl-2">
-              <RecordingIndicator />
-              <span className="text-red-500 font-medium">
-                {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
-              </span>
-              <button 
-                title="Cancelar Gravação"
-                onClick={cancelRecording}
-                className="ml-auto p-2 text-lg text-red-500 hover:text-red-400"
-              >
-                <FontAwesomeIcon icon={faTrashAlt} />
-              </button>
+        {isRecording && (
+          <div className="flex flex-1 items-center justify-between h-[40px] px-2">
+            <button 
+              title="Cancelar Gravação"
+              onClick={cancelRecording}
+              className="h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-full text-whatsapp-icon hover:bg-whatsapp-input-bg"
+            >
+              <FontAwesomeIcon icon={faTrashAlt} className="text-xl text-red-500" />
+            </button>
+            <div className="flex items-center space-x-2 text-sm text-whatsapp-text-primary">
+                <RecordingIndicator />
+                <span className="font-medium tabular-nums">
+                  {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                </span>
+            </div>
           </div>
-        ) : (
-          <button
-            title={getMainButtonTitle()}
-            onClick={mainButtonAction}
-            className="flex h-10 w-10 items-center justify-center p-2 text-lg text-whatsapp-icon hover:text-gray-200"
-          >
-            <FontAwesomeIcon icon={getMainButtonIcon()} />
-          </button>
         )}
+        <button
+          title={getMainButtonTitle()}
+          onClick={mainButtonAction}
+          className={`h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-full ml-1 ${isRecording || inputText.trim() || replyingTo ? 'bg-whatsapp-send-button-green text-white hover:bg-whatsapp-send-button-green-hover' : 'bg-transparent text-whatsapp-icon hover:bg-whatsapp-input-bg'}`}
+          disabled={isChatBlocked}
+        >
+          <FontAwesomeIcon icon={getMainButtonIcon()} className="text-xl" />
+        </button>
       </div>
     </footer>
   );

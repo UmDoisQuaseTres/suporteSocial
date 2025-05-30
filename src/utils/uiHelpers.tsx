@@ -11,10 +11,10 @@ interface RenderMessageStatusIconProps {
   marginClass?: string; // e.g., "mr-1" or "ml-1"
 }
 
-export const renderMessageStatusIcon = ({ status, marginClass = 'mr-1' }: RenderMessageStatusIconProps): React.ReactNode => {
+export const renderMessageStatusIcon = ({ status, marginClass = '' }: RenderMessageStatusIconProps): React.ReactNode => {
   if (!status) return null;
   const iconBaseClass = "text-xs";
-  const combinedClass = `${iconBaseClass} ${marginClass}`;
+  const combinedClass = `${iconBaseClass} ${marginClass}`.trim();
 
   switch (status) {
     case 'read': return <FontAwesomeIcon icon={faCheckDouble} className={`${combinedClass} text-sky-400`} />;
@@ -30,14 +30,17 @@ interface RenderMediaIconProps {
   className?: string;
 }
 
-export const renderMediaIcon = ({ chat, className = "mr-1.5 text-whatsapp-text-secondary" }: RenderMediaIconProps): React.ReactNode => {
+export const renderMediaIcon = ({ chat, className = "text-whatsapp-text-secondary" }: RenderMediaIconProps): React.ReactNode => {
   const lastMsg = chat.lastMessage;
   if (!lastMsg) return null;
   
-  if (lastMsg.mediaType === 'image' || lastMsg.imageUrl) return <FontAwesomeIcon icon={faImage} className={className} />;
-  if (lastMsg.mediaType === 'audio' || lastMsg.audioUrl) return <FontAwesomeIcon icon={faMicrophone} className={className} />;
-  if (lastMsg.mediaType === 'video' || lastMsg.videoUrl) return <FontAwesomeIcon icon={faVideo} className={className} />;
-  if (lastMsg.mediaType === 'document') return <FontAwesomeIcon icon={faFileAlt} className={className} />;
+  const baseIconStyling = "text-xs";
+  const fullClassName = `${baseIconStyling} ${className}`.trim();
+
+  if (lastMsg.mediaType === 'image' || lastMsg.imageUrl) return <FontAwesomeIcon icon={faImage} className={fullClassName} />;
+  if (lastMsg.mediaType === 'audio' || lastMsg.audioUrl) return <FontAwesomeIcon icon={faMicrophone} className={fullClassName} />;
+  if (lastMsg.mediaType === 'video' || lastMsg.videoUrl) return <FontAwesomeIcon icon={faVideo} className={fullClassName} />;
+  if (lastMsg.mediaType === 'document') return <FontAwesomeIcon icon={faFileAlt} className={fullClassName} />;
   
   return null;
 }; 

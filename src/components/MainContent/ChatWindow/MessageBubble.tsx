@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react'; // Removed useState as showActionsButton is removed
 import type { Message } from '../../../types'; // MessageStatus might no longer be needed here
 // import { formatMessageTime } from '../../../utils/date'; // Moved to MessageMeta
 // import { renderMessageStatusIcon } from '../../../utils/uiHelpers'; // Moved to MessageMeta
@@ -20,14 +20,17 @@ interface MessageBubbleProps {
   onToggleStarMessage: (messageId: string) => void; // Added prop to toggle star status
   isHighlighted?: boolean; // Added for visual cue
   searchTermToHighlight?: string; // New prop
+  onJumpToMessage?: (messageId: string) => void; // Added prop
 }
 
 // Helper function to highlight text
 const getHighlightedText = (text: string, highlight: string): React.ReactNode => {
-  if (!highlight.trim()) {
+  if (!highlight || !highlight.trim()) {
     return text;
   }
-  const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+  // Escape special characters in the highlight string for use in RegExp
+  const escapedHighlight = highlight.replace(/[.*+?^${}()|[\\\]]/g, '\\$&'); // $& inserts the matched substring
+  const parts = text.split(new RegExp(`(${escapedHighlight})`, 'gi'));
   return (
     <>
       {parts.map((part, index) => 
@@ -43,11 +46,10 @@ const getHighlightedText = (text: string, highlight: string): React.ReactNode =>
   );
 };
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, onStartForward, onToggleStarMessage, isHighlighted, searchTermToHighlight }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, onStartForward, onToggleStarMessage, isHighlighted, searchTermToHighlight, onJumpToMessage }) => {
   const isOutgoing = message.type === 'outgoing';
-  // hasTextContent can be simplified as its direct usage for MessageMeta positioning will change
   // const hasTextContent = !!message.text;
-  const [showActionsButton, setShowActionsButton] = useState(false);
+  // const [showActionsButton, setShowActionsButton] = useState(false); // REMOVED - group-hover/focus-within will handle visibility
 
   const handleReplyClick = () => { onStartReply(message); };
   const handleForwardClick = () => { onStartForward(message); };
@@ -64,11 +66,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
 
   const bubbleContent = (
     <div
-      className={`relative flex flex-col max-w-xs rounded-lg px-2.5 pt-1.5 pb-1 shadow-sm md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl ${ 
-        isOutgoing
-          ? 'bg-whatsapp-outgoing-bubble text-whatsapp-text-primary rounded-br-none'
-          : 'bg-whatsapp-incoming-bubble text-whatsapp-text-primary rounded-tl-none'
-      }`}
+      className={`relative flex flex-col max-w-xs rounded-lg px-2.5 pt-1.5 pb-1 shadow-sm md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl 
+      ${isOutgoing
+        ? 'bg-whatsapp-outgoing-bubble text-whatsapp-text-primary rounded-br-none'
+        : 'bg-whatsapp-incoming-bubble text-whatsapp-text-primary rounded-tl-none'
+      }
+      before:content-[''] before:absolute before:w-0 before:h-0 before:top-0
+      ${isOutgoing
+        ? "before:right-[-7px] before:border-t-[5px] before:border-t-transparent before:border-b-[5px] before:border-b-transparent before:border-l-[7px] before:border-l-whatsapp-outgoing-bubble"
+        : "before:left-[-7px] before:border-t-[5px] before:border-t-transparent before:border-b-[5px] before:border-b-transparent before:border-r-[7px] before:border-r-whatsapp-incoming-bubble"
+      }
+      `}
     >
       {message.isStarred && (
         <FontAwesomeIcon 
@@ -88,10 +96,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
           repliedMessageText={message.replyToMessagePreview}
           repliedMessageSenderName={message.replyToSenderName}
           isOutgoingBubble={isOutgoing}
+          onClick={onJumpToMessage && message.replyToMessageId ? () => onJumpToMessage(message.replyToMessageId!) : undefined}
         />
       )}
       {!isOutgoing && message.userName && (
-        <p className="mb-0.5 text-xs font-semibold text-teal-400">{message.userName}</p>
+        <p className={`mb-0.5 text-xs font-semibold text-whatsapp-light-green`}>{message.userName}</p> // Themed username for incoming
       )}
 
       {/* Media Content Area */}
@@ -104,14 +113,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
-              target.src = 'https://placehold.co/300x200/CCCCCC/000000?text=Erro';
+              target.src = 'https://placehold.co/300x200/CCCCCC/000000?text=Erro+ao+carregar'; // More descriptive error placeholder
             }}
           />
         </div>
       )}
       {message.mediaType === 'video' && message.videoUrl && (
-        // VideoPlayer already has some margin, check if mt-1 mb-1.5 is needed
-        <div className="rounded-md overflow-hidden">
+        <div className="rounded-md overflow-hidden my-1">
             <VideoPlayer 
             videoUrl={message.videoUrl}
             isOutgoing={isOutgoing}
@@ -119,7 +127,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
         </div>
       )}
       {message.mediaType === 'audio' && message.audioUrl && (
-        <div className="my-1.5"> {/* Audio player might need its own spacing */}
+        <div className="my-1.5">
             <AudioPlayer 
             audioUrl={message.audioUrl} 
             duration={message.duration} 
@@ -128,8 +136,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
         </div>
       )}
       {message.mediaType === 'document' && message.fileName && (
-        <div className="my-2 flex items-center rounded-md bg-black/10 p-2">
-          <FontAwesomeIcon icon={faFileAlt} className={`mr-2 text-2xl ${isOutgoing ? 'text-gray-300' : 'text-gray-400'}`} />
+        <div className={`my-2 flex items-center rounded-md p-2 ${isOutgoing ? 'bg-whatsapp-green' : 'bg-whatsapp-header-bg'}`}>
+          <FontAwesomeIcon icon={faFileAlt} className={`mr-2 text-2xl ${isOutgoing ? 'text-whatsapp-text-primary' : 'text-whatsapp-icon'}`} />
           <div className="flex-1 overflow-hidden">
             <p className="truncate text-sm font-medium text-whatsapp-text-primary">
               {message.fileName}
@@ -161,11 +169,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
   );
 
   const actionButton = (
-    <div className={`relative opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center ${isOutgoing ? 'mr-1' : 'ml-1'}`}>
+    <div className={`relative opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 flex items-center ${isOutgoing ? 'mr-1' : 'ml-1'}`}>
         <DropdownMenu
           trigger={
             <button 
-                className="p-1.5 rounded-full bg-gray-700/50 hover:bg-gray-600 text-whatsapp-icon text-xs"
+                className="p-1.5 rounded-full bg-whatsapp-header-bg hover:bg-whatsapp-input-bg text-whatsapp-icon text-xs focus:outline-none focus:ring-1 focus:ring-whatsapp-light-green"
                 title="Ações da mensagem"
             >
                 <FontAwesomeIcon icon={faChevronDown} />
@@ -173,7 +181,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
           }
           items={messageActionItems}
           menuPosition={isOutgoing ? 'left' : 'right'}
-          contentClasses="bg-whatsapp-input-bg border-gray-600 shadow-xl"
+          contentClasses="bg-whatsapp-input-bg border border-whatsapp-divider shadow-xl"
         />
     </div>
   );
@@ -181,8 +189,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onStartReply, on
   return (
     <div 
       className={`flex items-start mb-1 group ${isHighlighted ? 'message-highlighted' : ''} ${isOutgoing ? 'justify-end' : 'justify-start'}`}
-      onMouseEnter={() => setShowActionsButton(true)} 
-      onMouseLeave={() => setShowActionsButton(false)}
+      // No onMouseEnter/onMouseLeave needed due to group-hover/focus-within for actionButton
+      // tabIndex={0} // Consider if individual message bubbles should be focusable for a11y (e.g. screen reader navigation between messages)
     >
       {isOutgoing && actionButton} 
       {bubbleContent}

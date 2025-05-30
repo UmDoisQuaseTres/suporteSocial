@@ -12,6 +12,7 @@ import useStore, {
   useFilteredChats,
   useChatViewState
 } from './store/useStore';
+import ConfirmationDialog from './components/common/ConfirmationDialog';
 
 function App() {
   const {
@@ -49,6 +50,10 @@ function App() {
     archivedUserChats,
     unreadInArchivedCount,
     availableContacts,
+    confirmationDialog,
+    showConfirmationDialog,
+    hideConfirmationDialog,
+    confirmConfirmationDialog,
   } = useStore(state => ({
     // Actions
     handleSelectChat: state.handleSelectChat,
@@ -84,6 +89,10 @@ function App() {
     archivedUserChats: state.archivedUserChats(),
     unreadInArchivedCount: state.unreadInArchivedCount(),
     availableContacts: state.availableContacts(),
+    confirmationDialog: state.confirmationDialog,
+    showConfirmationDialog: state.showConfirmationDialog,
+    hideConfirmationDialog: state.hideConfirmationDialog,
+    confirmConfirmationDialog: state.confirmConfirmationDialog,
   }));
 
   // Use optimized selectors for frequently changing state
@@ -208,6 +217,20 @@ function App() {
             onExitGroup={handleExitGroup} // Store action
             onShowMediaGallery={handleShowMediaGallery}
             onShowStarredMessages={handleToggleStarredMessagesView} // Store action
+          />
+        )}
+        {confirmationDialog && confirmationDialog.isOpen && (
+          <ConfirmationDialog 
+            isOpen={true}
+            title={confirmationDialog.title}
+            message={confirmationDialog.message}
+            confirmText={confirmationDialog.confirmText}
+            cancelText={confirmationDialog.cancelText}
+            onConfirm={confirmConfirmationDialog}
+            onCancel={hideConfirmationDialog}
+            isDestructive={confirmationDialog.isDestructive}
+            confirmButtonVariant={confirmationDialog.confirmButtonVariant}
+            hideCancelButton={confirmationDialog.hideCancelButton}
           />
         )}
       </div>

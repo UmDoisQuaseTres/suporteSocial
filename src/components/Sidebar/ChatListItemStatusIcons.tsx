@@ -5,11 +5,14 @@ import { faBellSlash } from '@fortawesome/free-solid-svg-icons';
 interface ChatListItemStatusIconsProps {
   isMuted?: boolean;
   unreadCount?: number;
+  isMarkedUnread?: boolean;
 }
 
-const ChatListItemStatusIcons: React.FC<ChatListItemStatusIconsProps> = ({ isMuted, unreadCount }) => {
+const ChatListItemStatusIcons: React.FC<ChatListItemStatusIconsProps> = ({ isMuted, unreadCount, isMarkedUnread }) => {
+  const showUnreadBadge = (isMarkedUnread || (unreadCount && unreadCount > 0));
+  
   // If neither icon needs to be rendered, we can return null to render nothing.
-  if (!isMuted && !(unreadCount && unreadCount > 0)) {
+  if (!isMuted && !showUnreadBadge) {
     return null;
   }
 
@@ -18,12 +21,12 @@ const ChatListItemStatusIcons: React.FC<ChatListItemStatusIconsProps> = ({ isMut
       {isMuted && (
         <FontAwesomeIcon icon={faBellSlash} className="text-sm text-whatsapp-text-secondary" title="Silenciada"/>
       )}
-      {unreadCount && unreadCount > 0 && (
+      {showUnreadBadge && (
         <span
           className={`flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-xs font-semibold text-white
                       ${isMuted ? 'bg-whatsapp-text-secondary' : 'bg-whatsapp-light-green'}`}
         >
-          {unreadCount}
+          {isMarkedUnread && !(unreadCount && unreadCount > 0) ? '●' : unreadCount}
         </span>
       )}
     </div>

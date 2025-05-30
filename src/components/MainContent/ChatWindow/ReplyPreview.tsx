@@ -7,6 +7,7 @@ interface ReplyPreviewProps {
   isOutgoingBubble: boolean; // To adjust styling if needed based on the main bubble
   onCancelReply?: () => void; // For the reply context in MessageInput
   isContextInInput?: boolean; // True if this preview is shown in MessageInput
+  onClick?: () => void; // For jumping to the original message from bubble
 }
 
 const ReplyPreview: React.FC<ReplyPreviewProps> = ({
@@ -15,24 +16,36 @@ const ReplyPreview: React.FC<ReplyPreviewProps> = ({
   isOutgoingBubble,
   onCancelReply,
   isContextInInput = false,
+  onClick,
 }) => {
   if (!repliedMessageText || !repliedMessageSenderName) {
     return null;
   }
 
-  const bgColor = isContextInInput 
-    ? 'bg-whatsapp-input-bg' 
-    : (isOutgoingBubble ? 'bg-black/20' : 'bg-black/20');
-  const borderColor = isContextInInput 
-    ? 'border-whatsapp-light-green' 
-    : (isOutgoingBubble ? 'border-teal-300' : 'border-teal-400');
-  const textColor = isContextInInput ? 'text-whatsapp-text-primary' : 'text-gray-300';
-  const senderColor = isContextInInput 
-    ? 'text-whatsapp-light-green' 
-    : (isOutgoingBubble ? 'text-teal-300' : 'text-teal-400');
+  // Styles for when the preview is inside MessageInput
+  const inputContextBgColor = 'bg-whatsapp-input-bg';
+  const inputContextBorderColor = 'border-whatsapp-light-green';
+  const inputContextTextColor = 'text-whatsapp-text-primary';
+  const inputContextSenderColor = 'text-whatsapp-light-green';
+
+  // Styles for when the preview is inside a MessageBubble
+  const bubbleContextBgColor = isOutgoingBubble ? 'bg-whatsapp-outgoing-bubble/80' : 'bg-whatsapp-incoming-bubble/80';
+  const bubbleContextBorderColor = repliedMessageSenderName === 'Você' ? 'border-whatsapp-light-green' : 'border-sky-500';
+  const bubbleContextTextColor = 'text-whatsapp-text-primary'; // Assuming this works on the semi-transparent bg
+  const bubbleContextSenderColor = repliedMessageSenderName === 'Você' ? 'text-whatsapp-light-green' : 'text-sky-400';
+
+  const bgColor = isContextInInput ? inputContextBgColor : bubbleContextBgColor;
+  const borderColor = isContextInInput ? inputContextBorderColor : bubbleContextBorderColor;
+  const textColor = isContextInInput ? inputContextTextColor : bubbleContextTextColor;
+  const senderColor = isContextInInput ? inputContextSenderColor : bubbleContextSenderColor;
+  const padding = isContextInInput ? 'p-2' : 'px-2 py-1.5';
+  const cursor = isContextInInput ? '' : 'cursor-pointer';
 
   return (
-    <div className={`relative mb-1.5 p-2 rounded-md ${bgColor} border-l-4 ${borderColor}`}>
+    <div 
+      className={`relative mb-1.5 ${padding} rounded-md ${bgColor} border-l-4 ${borderColor} ${cursor}`}
+      onClick={isContextInInput ? undefined : onClick}
+    >
       {isContextInInput && onCancelReply && (
         <button 
           onClick={onCancelReply}

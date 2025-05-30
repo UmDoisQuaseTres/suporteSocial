@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatHeader from './ChatHeader';
 import MessageArea from './MessageArea';
 import MessageInput from './MessageInput';
@@ -27,6 +27,7 @@ interface ChatWindowProps {
   onToggleStarMessage: (messageId: string) => void;
   messageToHighlightId?: string | null;
   clearMessageToHighlight?: () => void;
+  setExternalMessageToHighlightId: (messageId: string | null) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -42,13 +43,28 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onForwardMessage,
   onToggleStarMessage,
   messageToHighlightId,
-  clearMessageToHighlight
+  clearMessageToHighlight,
+  setExternalMessageToHighlightId
 }) => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [showForwardModal, setShowForwardModal] = useState<boolean>(false);
   const [isChatSearchActive, setIsChatSearchActive] = useState<boolean>(false);
   const [chatSearchTerm, setChatSearchTerm] = useState<string>('');
+  const [internalMessageToHighlightId, setInternalMessageToHighlightId] = useState<string | null>(messageToHighlightId || null);
+
+  useEffect(() => {
+    setInternalMessageToHighlightId(messageToHighlightId || null);
+  }, [messageToHighlightId]);
+
+  const handleClearInternalHighlight = () => {
+    setInternalMessageToHighlightId(null);
+    if (clearMessageToHighlight) clearMessageToHighlight();
+  };
+
+  const handleJumpToMessage = (messageId: string) => {
+    setInternalMessageToHighlightId(messageId);
+  };
 
   const handleStartReply = (message: Message) => {
     setReplyingTo(message);
@@ -104,6 +120,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     <div className="flex h-full flex-col">
       <ChatHeader
         chat={chat}
+        currentUserId={currentUserId}
         onToggleArchiveStatus={onToggleArchiveStatus}
         onShowContactInfo={onShowContactInfo}
         onClearChatMessages={onClearChatMessages}
@@ -119,9 +136,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         onStartReply={handleStartReply}
         onStartForward={handleStartForward}
         onToggleStarMessage={onToggleStarMessage}
-        messageToHighlightId={messageToHighlightId}
-        clearMessageToHighlight={clearMessageToHighlight}
+        messageToHighlightId={internalMessageToHighlightId}
+        clearMessageToHighlight={handleClearInternalHighlight}
         chatSearchTerm={chatSearchTerm}
+        onJumpToMessage={handleJumpToMessage}
       />
       <MessageInput
         chatId={chat.id}

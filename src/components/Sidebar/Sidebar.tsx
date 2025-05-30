@@ -120,6 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               onToggleArchiveChatStatus={onToggleArchiveChatStatus}
               searchTerm={searchTerm}
               isArchivedView={showArchived}
+              currentUserId={currentUserId}
             />
           </div>
         </>

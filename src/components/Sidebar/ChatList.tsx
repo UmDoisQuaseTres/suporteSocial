@@ -11,6 +11,7 @@ interface ChatListProps {
   onToggleArchiveChatStatus: (chatId: string) => void;
   searchTerm?: string;
   isArchivedView?: boolean;
+  currentUserId: string;
 }
 
 const ChatList: React.FC<ChatListProps> = ({
@@ -19,7 +20,8 @@ const ChatList: React.FC<ChatListProps> = ({
   activeChatId,
   onToggleArchiveChatStatus,
   searchTerm,
-  isArchivedView
+  isArchivedView,
+  currentUserId
 }) => {
   if (chats.length === 0) {
     let emptyMessage = "Nenhuma conversa para mostrar.";
@@ -48,7 +50,7 @@ const ChatList: React.FC<ChatListProps> = ({
             chat={chat}
             onSelectChat={onSelectChat}
             isActive={chat.id === activeChatId}
-            onToggleArchiveChatStatus={onToggleArchiveChatStatus}
+            currentUserId={currentUserId}
           />
         ))}
     </div>
