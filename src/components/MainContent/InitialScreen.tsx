@@ -4,7 +4,7 @@ import { faLaptop, faLock } from '@fortawesome/free-solid-svg-icons';
 
 const InitialScreen: React.FC = () => {
   return (
-    <div className="flex h-full flex-col items-center justify-center bg-[#222E35] p-8 text-center text-gray-300">
+    <div className="flex h-full flex-col items-center justify-center bg-whatsapp-chat-bg p-8 text-center text-gray-300">
       <img
         src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/512px-WhatsApp.svg.png"
         alt="WhatsApp Logo"

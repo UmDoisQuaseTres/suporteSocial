@@ -12,12 +12,71 @@ body {
 
 /* Scrollbars (opcional, mas melhora a aparência) */
 .chat-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 .chat-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #4a5568;
+    background-color: #374151;
     border-radius: 3px;
 }
 .chat-scrollbar::-webkit-scrollbar-track {
-    background-color: #2d3748;
+    background-color: #1f2937;
+}
+
+/* Custom styling for audio player range input thumb */
+.range-sm::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px; /* Adjust size as needed */
+  height: 10px; /* Adjust size as needed */
+  border-radius: 50%;
+  cursor: pointer;
+  margin-top: -3.5px; /* Vertically center thumb on track (height of thumb - height of track) / 2 */
+}
+
+.range-sm.range-thumb-outgoing::-webkit-slider-thumb {
+  background-color: #E5E7EB; /* Corresponds to bg-gray-200 */
+}
+
+.range-sm.range-thumb-incoming::-webkit-slider-thumb {
+  background-color: #FFFFFF; /* Corresponds to bg-white */
+}
+
+/* Firefox thumb styling (optional, but good for cross-browser) */
+.range-sm::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none; /* Important for Firefox */
+}
+
+.range-sm.range-thumb-outgoing::-moz-range-thumb {
+  background-color: #E5E7EB;
+}
+
+.range-sm.range-thumb-incoming::-moz-range-thumb {
+  background-color: #FFFFFF;
+}
+
+/* Highlight animation for scrolled-to message */
+@keyframes fadeOutHighlight {
+  from { background-color: rgba(250, 204, 21, 0.3); /* Tailwind yellow-400 at 30% opacity */ }
+  to { background-color: transparent; }
+}
+
+.message-highlighted > div { /* Target the inner bubble div */
+  animation: fadeOutHighlight 2s ease-out forwards;
+}
+
+/* Animation for recording indicator bars */
+@keyframes pulse-bar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1.0); }
+}
+
+.animate-pulse-bar {
+  animation-name: pulse-bar;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transform-origin: bottom;
 }

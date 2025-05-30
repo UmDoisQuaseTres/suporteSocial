@@ -1,14 +1,30 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import MessageBubble from './MessageBubble';
 import type { Message } from '../../../types';
 
 interface MessageAreaProps {
   messages: Message[];
   currentUserId: string; // Removido pois MessageBubble já usa message.type
+  onStartReply: (message: Message) => void;
+  onStartForward: (message: Message) => void;
+  onToggleStarMessage: (messageId: string) => void;
+  messageToHighlightId?: string | null;
+  clearMessageToHighlight?: () => void;
+  chatSearchTerm?: string;
 }
 
-const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
+const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId, onStartReply, onStartForward, onToggleStarMessage, messageToHighlightId, clearMessageToHighlight, chatSearchTerm }) => { // currentUserId ainda pode ser útil se MessageBubble não for alterado
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const highlightedMessageRef = useRef<HTMLDivElement>(null);
+
+  const filteredMessages = useMemo(() => {
+    if (!chatSearchTerm) {
+      return messages;
+    }
+    return messages.filter(msg => 
+      msg.text?.toLowerCase().includes(chatSearchTerm.toLowerCase())
+    );
+  }, [messages, chatSearchTerm]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -21,14 +37,23 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
   };
 
   useEffect(() => {
-    // Atrasar um pouco o scroll para dar tempo da UI renderizar, especialmente se houver muitas mensagens
-    const timer = setTimeout(() => {
-        scrollToBottom();
-    }, 100); // Pequeno delay
-    return () => clearTimeout(timer);
-  }, [messages]);
+    if (messageToHighlightId && highlightedMessageRef.current) {
+      highlightedMessageRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center' 
+      });
+      if (clearMessageToHighlight) {
+        clearMessageToHighlight();
+      }
+    } else if (!messageToHighlightId && !chatSearchTerm) {
+      const timer = setTimeout(() => {
+          scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [filteredMessages, messageToHighlightId, clearMessageToHighlight, chatSearchTerm]);
 
-  const groupedMessages: { [date: string]: Message[] } = (messages || []).reduce((acc, msg) => { // Adicionado (messages || []) para segurança
+  const groupedMessages: { [date: string]: Message[] } = (filteredMessages || []).reduce((acc, msg) => { // Adicionado (filteredMessages || []) para segurança
     const dateKey = new Date(msg.timestamp).toLocaleDateString('pt-PT', {day: '2-digit', month: 'long', year: 'numeric'});
     if (!acc[dateKey]) {
       acc[dateKey] = [];
@@ -40,8 +65,7 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
 
   return (
     <div
-      className="chat-scrollbar flex-1 overflow-y-auto bg-cover bg-center p-4 md:p-6 space-y-2"
-      style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')" }}
+      className="chat-scrollbar flex-1 overflow-y-auto p-4 md:p-6 space-y-2"
     >
       {Object.entries(groupedMessages).map(([date, msgsInDate]) => (
         <React.Fragment key={date}>
@@ -53,7 +77,20 @@ const MessageArea: React.FC<MessageAreaProps> = ({ messages, currentUserId }) =>
           </div>
           {/* Passando currentUserId para MessageBubble se ele ainda precisar */}
           {msgsInDate.map((message) => (
-            <MessageBubble key={message.id} message={message} /* currentUserId={currentUserId} */ />
+            <div 
+              key={message.id} 
+              id={`message-${message.id}`}
+              ref={message.id === messageToHighlightId ? highlightedMessageRef : null}
+            >
+              <MessageBubble 
+                message={message} 
+                onStartReply={onStartReply}
+                onStartForward={onStartForward}
+                onToggleStarMessage={onToggleStarMessage}
+                isHighlighted={message.id === messageToHighlightId}
+                searchTermToHighlight={chatSearchTerm}
+              />
+            </div>
           ))}
         </React.Fragment>
       ))}

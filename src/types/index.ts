@@ -9,11 +9,14 @@ export interface User {
   
   export interface Message {
     id: string;
-    text?: string;
+    text?: string; // Caption for media, or text message
     imageUrl?: string;
-    audioUrl?: string; // Novo: para indicar áudio
-    videoUrl?: string; // Novo: para indicar vídeo
-    mediaType?: 'image' | 'audio' | 'video'; // Novo: para facilitar
+    audioUrl?: string;
+    videoUrl?: string;
+    documentUrl?: string; // For potential future download link
+    fileName?: string; // To display the name of the document
+    duration?: number; // Added for audio/video duration in seconds
+    mediaType?: 'image' | 'audio' | 'video' | 'document'; // Added 'document'
     timestamp: number; // Usaremos timestamp para ordenação e formatação
     senderId: string; // Para saber quem enviou
     receiverId?: string; // Para chats 1-1
@@ -21,6 +24,11 @@ export interface User {
     status?: MessageStatus; // Apenas para mensagens enviadas pelo usuário atual
     type: 'incoming' | 'outgoing'; // Facilita a renderização
     userName?: string; // Para mensagens de grupo recebidas
+    replyToMessageId?: string; // ID of the message being replied to
+    replyToMessagePreview?: string; // A short text preview of the replied message
+    replyToSenderName?: string; // Name of the sender of the message being replied to
+    isForwarded?: boolean; // Indicates if the message is forwarded
+    isStarred?: boolean; // Indicates if the message is starred
   }
   
   export interface Chat {

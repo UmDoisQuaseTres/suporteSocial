@@ -33,10 +33,10 @@ const InfoPanelMenuItem: React.FC<InfoPanelMenuItemProps> = ({
 
   return (
     <div
-      className={`flex items-center p-4 ${onToggle || onClick ? 'cursor-pointer hover:bg-whatsapp-active-chat' : 'cursor-default'}`}
+      className={`flex items-center px-4 py-3 ${onToggle || onClick ? 'cursor-pointer hover:bg-whatsapp-active-chat' : 'cursor-default'}`}
       onClick={handleItemClick}
     >
-      <FontAwesomeIcon icon={icon} className={`mr-6 w-5 text-xl ${colorClass}`} />
+      <FontAwesomeIcon icon={icon} className={`mr-4 w-5 text-lg ${colorClass}`} />
       <div className="flex-1">
         <span className="text-sm text-whatsapp-text-primary">{text}</span>
         {subtext && <p className="text-xs text-whatsapp-text-secondary">{subtext}</p>}

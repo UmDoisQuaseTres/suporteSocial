@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUsers, faUserPlus, faAddressBook } from '@fortawesome/free-solid-svg-icons';
 import type { User } from '../../types';
 import ContactListItem from './ContactListItem'; // Import the extracted component
 
@@ -9,13 +9,15 @@ export interface NewChatViewProps {
   onSelectContact: (contact: User) => void;
   contactSearchTerm: string;
   onContactSearchTermChange: (term: string) => void;
+  onShowCreateGroupView: () => void;
 }
 
 const NewChatView: React.FC<NewChatViewProps> = ({ 
   contacts, 
   onSelectContact, 
   contactSearchTerm, 
-  onContactSearchTermChange 
+  onContactSearchTermChange,
+  onShowCreateGroupView
 }) => {
   const filteredContacts = contactSearchTerm 
     ? contacts.filter(contact => contact.name.toLowerCase().includes(contactSearchTerm.toLowerCase())) 
@@ -23,6 +25,17 @@ const NewChatView: React.FC<NewChatViewProps> = ({
 
   return (
     <div className="flex flex-col h-full">
+      <div 
+        className="flex cursor-pointer items-center border-b border-whatsapp-header-bg p-3.5 text-whatsapp-text-primary hover:bg-whatsapp-active-chat"
+        onClick={onShowCreateGroupView}
+      >
+        <div className="mr-4 flex h-10 w-10 items-center justify-center rounded-full bg-whatsapp-light-green">
+          <FontAwesomeIcon icon={faUsers} className="text-xl text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base font-medium">Novo grupo</h3>
+        </div>
+      </div>
       <div className="bg-whatsapp-sidebar-bg p-2">
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -43,9 +56,20 @@ const NewChatView: React.FC<NewChatViewProps> = ({
             <ContactListItem key={contact.id} contact={contact} onSelectContact={onSelectContact} />
           ))
         ) : (
-          <p className="p-4 text-center text-sm text-whatsapp-text-secondary">
-            {contactSearchTerm ? "Nenhum contacto encontrado." : "Nenhum contacto disponível."}
-          </p>
+          <div className="flex flex-col items-center justify-center h-full p-8 text-center text-whatsapp-text-secondary">
+            <FontAwesomeIcon 
+              icon={contactSearchTerm ? faSearch : faAddressBook} 
+              className="mb-4 text-4xl text-whatsapp-icon/50" 
+            />
+            <p className="text-sm">
+              {contactSearchTerm 
+                ? `Nenhum contacto encontrado para "${contactSearchTerm}".` 
+                : "Nenhum contacto disponível na sua lista."}
+            </p>
+            {!contactSearchTerm && (
+                <p className="text-xs mt-2">Adicione novos contactos ao seu dispositivo para vê-los aqui.</p>
+            )}
+          </div>
         )}
       </div>
     </div>

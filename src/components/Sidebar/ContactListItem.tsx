@@ -5,11 +5,14 @@ import Avatar from '../common/Avatar';
 export interface ContactListItemProps {
   contact: User;
   onSelectContact: (contact: User) => void;
+  isSelected?: boolean;
 }
 
-const ContactListItem: React.FC<ContactListItemProps> = ({ contact, onSelectContact }) => (
+const ContactListItem: React.FC<ContactListItemProps> = ({ contact, onSelectContact, isSelected }) => (
   <div 
-    className="flex cursor-pointer items-center border-b border-gray-700/30 p-3 text-whatsapp-text-primary hover:bg-whatsapp-active-chat" 
+    className={`flex cursor-pointer items-center border-b border-gray-700/30 p-3 text-whatsapp-text-primary hover:bg-whatsapp-active-chat ${
+      isSelected ? 'bg-whatsapp-header-bg' : ''
+    }`}
     onClick={() => onSelectContact(contact)}
   >
     <Avatar 

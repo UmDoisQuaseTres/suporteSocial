@@ -3,14 +3,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faXmark, faUser, faUsers, faPhone, faBellSlash, faStar, faBell,
   faPhotoFilm, faLink, faFileLines, faBan, faTrashAlt, faRightFromBracket,
-  faUserShield, faUserCheck
+  faUserShield, faUserCheck,
+  faCog, faSignOutAlt,
+  faFileAudio, faFileVideo, faFileImage
 } from '@fortawesome/free-solid-svg-icons';
-import type { Chat, User } from '../../types';
+import type { Chat, User, Message } from '../../types';
 import InfoPanelMenuItem from './InfoPanelMenuItem';
 import Avatar from '../common/Avatar';
 
 interface ContactInfoPanelProps {
   chatInfo: Chat;
+  chatMessages: Message[];
   onClose: () => void;
   panelWidthClass: string;
   currentUserId: string;
@@ -18,15 +21,28 @@ interface ContactInfoPanelProps {
   onToggleBlockChat: (chatId: string) => void;
   onDeleteChat: (chatId: string) => void;
   onExitGroup: (chatId: string) => void;
+  onShowMediaGallery: (chat: Chat) => void;
+  onShowStarredMessages: () => void;
 }
 
+// A simple visual separator component
+const SectionSeparator: React.FC = () => <hr className="mx-0 my-1 border-gray-700/10" />;
+
 const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
-  chatInfo, onClose, panelWidthClass, currentUserId,
-  onToggleMuteChat, onToggleBlockChat, onDeleteChat, onExitGroup
+  chatInfo, chatMessages, onClose, panelWidthClass, currentUserId,
+  onToggleMuteChat, onToggleBlockChat, onDeleteChat, onExitGroup,
+  onShowMediaGallery,
+  onShowStarredMessages
 }) => {
   const isGroup = chatInfo.type === 'group';
   const contactUser = isGroup ? null : chatInfo.participants?.find(p => p.id !== currentUserId);
-  const groupAdminId = isGroup && chatInfo.participants && chatInfo.participants.length > 0 ? chatInfo.participants[0].id : null;
+  const groupAdminId = isGroup && chatInfo.participants?.[0]?.id;
+
+  const mediaItems = (chatMessages || []).filter(
+    msg => msg.imageUrl || msg.videoUrl || msg.audioUrl || (msg.mediaType === 'document' && msg.fileName)
+  );
+  const mediaCount = mediaItems.length;
+  const displayedMedia = mediaItems.slice(0, 3);
 
   const handleMuteToggle = () => {
     onToggleMuteChat(chatInfo.id);
@@ -47,7 +63,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
   return (
     <aside className={`flex h-full flex-col border-l border-gray-700/50 bg-whatsapp-sidebar-bg text-whatsapp-text-primary ${panelWidthClass}`}>
       <header className="flex h-[60px] items-center bg-whatsapp-header-bg p-3">
-        <button onClick={onClose} className="mr-6 text-xl text-whatsapp-icon hover:text-gray-200">
+        <button onClick={onClose} className="mr-6 text-lg text-whatsapp-icon hover:text-gray-200">
           <FontAwesomeIcon icon={faXmark} />
         </button>
         <h2 className="text-lg font-medium">
@@ -57,16 +73,18 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
 
       <div className="flex-1 overflow-y-auto chat-scrollbar">
         {/* Secção Avatar e Nome */}
-        <section className="flex flex-col items-center p-6 text-center">
+        <section className="flex flex-col items-center p-4 text-center">
           <Avatar 
             src={chatInfo.avatarUrl || contactUser?.avatarUrl}
             name={chatInfo.name}
-            sizeClasses="h-32 w-32 md:h-40 md:w-40"
+            sizeClasses="h-24 w-24"
             fallbackText={chatInfo.name.charAt(0)}
           />
-          <h2 className="mt-4 text-xl font-semibold text-whatsapp-text-primary break-all">{chatInfo.name}</h2>
+          <h2 className="mt-3 text-xl font-semibold text-whatsapp-text-primary break-all">{chatInfo.name}</h2>
           {isGroup ? (
-            <p className="text-sm text-whatsapp-text-secondary">{chatInfo.participants?.length || 0} participantes</p>
+            <p className="text-sm text-whatsapp-text-secondary">
+              {chatInfo.participants?.length || 0} participante{ (chatInfo.participants?.length || 0) !== 1 ? 's' : ''}
+            </p>
           ) : (
             <p className="mt-1 text-sm text-whatsapp-text-primary">
               {contactUser?.id ? `~${contactUser.id}` : `ID: ${chatInfo.id}`}
@@ -77,32 +95,55 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
         {/* Secção Recado */}
         {!isGroup && contactUser?.about && (
           <>
-            <hr className="mx-0 border-gray-700/20" />
-            <section className="px-6 py-4">
-              <h3 className="mb-1 text-xs font-normal text-teal-400">Recado</h3>
+            <SectionSeparator />
+            <section className="px-4 py-3">
+              <h3 className="mb-1 text-xs font-normal text-whatsapp-text-secondary">Recado</h3>
               <p className="text-sm text-whatsapp-text-primary">{contactUser.about}</p>
             </section>
           </>
         )}
         
-        <hr className="mx-0 border-gray-700/20" />
+        <SectionSeparator />
 
         {/* Secção Mídia */}
         <section className="px-2 py-3">
             <div className="flex justify-between items-center mb-2 px-4">
                  <h3 className="text-sm font-normal text-whatsapp-text-secondary">Mídia, links e docs</h3>
-                 <button className="text-xs text-teal-400 hover:text-teal-300">0 &gt;</button>
+                 <button 
+                    onClick={() => onShowMediaGallery(chatInfo)}
+                    className="text-xs text-whatsapp-text-secondary hover:text-teal-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={mediaCount === 0}
+                 >
+                    {mediaCount} &gt;
+                 </button>
             </div>
-            <div className="grid grid-cols-4 gap-0.5 px-3 md:grid-cols-3">
-                {[1,2,3,4].map(i=>(
-                    <div key={i} className="aspect-square bg-whatsapp-header-bg rounded-sm flex items-center justify-center">
-                        {/* <FontAwesomeIcon icon={faPhotoFilm} className="text-2xl text-whatsapp-icon"/> */}
-                    </div>
-                ))}
-            </div>
+            {mediaCount > 0 ? (
+              <div className="grid grid-cols-3 gap-1 px-3">
+                  {displayedMedia.map(item => (
+                      <div key={item.id} className="aspect-square bg-whatsapp-header-bg rounded-md flex items-center justify-center overflow-hidden">
+                          {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.text || 'Imagem'} className="h-full w-full object-cover" />
+                          ) : item.videoUrl ? (
+                              <FontAwesomeIcon icon={faFileVideo} className="text-2xl text-whatsapp-icon"/>
+                          ) : item.audioUrl ? (
+                              <FontAwesomeIcon icon={faFileAudio} className="text-2xl text-whatsapp-icon"/>
+                          ) : item.mediaType === 'document' ? (
+                              <FontAwesomeIcon icon={faFileLines} className="text-2xl text-whatsapp-icon"/>
+                          ) : (
+                              <FontAwesomeIcon icon={faFileImage} className="text-2xl text-whatsapp-icon"/>
+                          )}
+                      </div>
+                  ))}
+                  {Array(Math.max(0, 3 - displayedMedia.length)).fill(null).map((_, index) => (
+                    <div key={`placeholder-${index}`} className="aspect-square bg-whatsapp-header-bg rounded-md"></div>
+                  ))}
+              </div>
+            ) : (
+              <p className="px-4 text-xs text-whatsapp-text-secondary italic">Nenhuma mídia, link ou documento compartilhado ainda.</p>
+            )}
         </section>
 
-        <hr className="mx-0 border-gray-700/20" />
+        <SectionSeparator />
 
         {/* Secção Opções */}
         <section>
@@ -115,20 +156,29 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             onToggle={handleMuteToggle}
             colorClass={chatInfo.isMuted ? "text-yellow-500" : "text-whatsapp-text-secondary"}
           />
-          <InfoPanelMenuItem icon={faStar} text="Mensagens favoritas" />
+          <InfoPanelMenuItem 
+            icon={faStar} 
+            text="Mensagens favoritas" 
+            onClick={onShowStarredMessages}
+          />
+           <InfoPanelMenuItem
+            icon={faCog}
+            text="Definições"
+            onClick={() => console.log("Settings clicked for chat:", chatInfo.id)}
+          />
         </section>
 
         {/* Secção Participantes (Grupos) */}
         {isGroup && chatInfo.participants && (
           <>
-            <hr className="mx-0 border-gray-700/20" />
+            <SectionSeparator />
             <section className="px-1 py-3">
               <h3 className="mb-1 px-5 text-sm font-normal text-whatsapp-text-secondary">
-                {chatInfo.participants.length} Participante{chatInfo.participants.length === 1 ? '' : 's'}
+                {chatInfo.participants.length} Participante{chatInfo.participants.length !== 1 ? 's' : ''}
               </h3>
               <div className="max-h-60 overflow-y-auto chat-scrollbar">
                 {chatInfo.participants.map(participant => (
-                  <div key={participant.id} className="flex cursor-pointer items-center p-3 px-5 hover:bg-whatsapp-active-chat">
+                  <div key={participant.id} className="flex cursor-pointer items-center px-4 py-2.5 hover:bg-whatsapp-active-chat">
                     <Avatar 
                         src={participant.avatarUrl}
                         name={participant.name}
@@ -156,7 +206,7 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
           </>
         )}
         
-        <hr className="mx-0 border-gray-700/20" />
+        <SectionSeparator />
 
         {/* Secção Ações de Perigo */}
         <section className="py-2">
@@ -169,6 +219,12 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             />
           )}
           <InfoPanelMenuItem
+            icon={faUserShield}
+            text={isGroup ? "Reportar grupo" : "Reportar contacto"}
+            colorClass="text-red-500"
+            onClick={() => console.log(`Reportar: ${chatInfo.id} (${chatInfo.name})`)}
+          />
+           <InfoPanelMenuItem
             icon={faTrashAlt}
             text={`Apagar conversa`}
             colorClass="text-red-500"
@@ -183,9 +239,18 @@ const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({
             />
           )}
         </section>
-        <div className="p-4 text-center text-xs text-whatsapp-text-secondary">
-            Criado por IA para {chatInfo.name} em {new Date().toLocaleDateString()}
-        </div>
+        
+        <SectionSeparator />
+        
+        {/* Logout Section - Added as a new section */}
+        <section className="py-2">
+            <InfoPanelMenuItem
+                icon={faSignOutAlt}
+                text="Terminar Sessão"
+                colorClass="text-red-500"
+                onClick={() => console.log("Logout action initiated for:", chatInfo.name)}
+            />
+        </section>
       </div>
     </aside>
   );

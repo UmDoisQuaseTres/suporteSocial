@@ -5,6 +5,7 @@ import SidebarHeader from './SidebarHeader';
 import ChatSearch from './ChatSearch';
 import ArchivedItem from './ArchivedItem';
 import NewChatView from './NewChatView';
+import CreateGroupView from './CreateGroupView';
 
 interface SidebarProps {
   unreadInArchivedCount: number;
@@ -22,6 +23,12 @@ interface SidebarProps {
   sidebarWidthClass?: string;
   totalArchivedChats: number;
   onToggleArchiveChatStatus: (chatId: string) => void;
+  showCreateGroupView: boolean;
+  onToggleCreateGroupView: () => void;
+  onCreateGroup: (groupName: string, selectedContactIds: string[]) => void;
+  currentUserId: string;
+  isCreatingGroup: boolean;
+  onShowStarredMessages?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -39,23 +46,39 @@ const Sidebar: React.FC<SidebarProps> = ({
   onStartNewChat,
   sidebarWidthClass,
   totalArchivedChats,
-  onToggleArchiveChatStatus
+  onToggleArchiveChatStatus,
+  showCreateGroupView,
+  onToggleCreateGroupView,
+  onCreateGroup,
+  currentUserId,
+  isCreatingGroup,
+  onShowStarredMessages
 }) => {
   const [contactSearchTerm, setContactSearchTerm] = useState<string>('');
 
   useEffect(() => {
-    if (!showNewChatView) {
+    if (!showNewChatView && !showCreateGroupView) {
       setContactSearchTerm('');
     }
-  }, [showNewChatView]);
+  }, [showNewChatView, showCreateGroupView]);
+
+  const handleBackFromNewOrGroupView = () => {
+    if (showNewChatView) onToggleNewChatView();
+    if (showCreateGroupView) onToggleCreateGroupView();
+  };
 
   return (
     <aside className={`flex w-full flex-col border-r border-gray-700/50 bg-whatsapp-sidebar-bg text-whatsapp-text-primary ${sidebarWidthClass || 'md:w-1/3'}`}>
-      <SidebarHeader
+      <SidebarHeader 
         showArchived={showArchived}
         showNewChatView={showNewChatView}
+        showCreateGroupView={showCreateGroupView}
         onToggleArchivedView={onToggleArchivedView}
-        onToggleNewChatView={onToggleNewChatView}
+        onToggleNewChatView={handleBackFromNewOrGroupView}
+        onToggleCreateGroupView={handleBackFromNewOrGroupView}
+        onInitiateNewChat={onToggleNewChatView}
+        onInitiateCreateGroup={onToggleCreateGroupView}
+        onShowStarredMessages={onShowStarredMessages}
       />
 
       {showNewChatView ? (
@@ -64,6 +87,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           onSelectContact={onStartNewChat}
           contactSearchTerm={contactSearchTerm}
           onContactSearchTermChange={setContactSearchTerm}
+          onShowCreateGroupView={onToggleCreateGroupView}
+        />
+      ) : showCreateGroupView ? (
+        <CreateGroupView 
+          availableContacts={availableContacts}
+          currentUserId={currentUserId}
+          onCreateGroup={onCreateGroup}
+          onCancel={onToggleCreateGroupView}
+          isCreatingGroup={isCreatingGroup}
         />
       ) : (
         <>
@@ -86,6 +118,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               onSelectChat={onSelectChat}
               activeChatId={activeChatId}
               onToggleArchiveChatStatus={onToggleArchiveChatStatus}
+              searchTerm={searchTerm}
+              isArchivedView={showArchived}
             />
           </div>
         </>

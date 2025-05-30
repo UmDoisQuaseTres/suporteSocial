@@ -24,7 +24,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
   onToggleArchiveChatStatus
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const activeBgClass = isActive ? 'bg-whatsapp-active-chat' : '';
+  const activeBgClass = isActive ? 'bg-whatsapp-header-bg' : '';
 
   const handleArchiveButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -33,7 +33,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
 
   return (
     <div
-      className={`relative flex cursor-pointer items-center p-3 ${activeBgClass} border-b border-gray-700/30 hover:bg-whatsapp-active-chat`}
+      className={`relative flex cursor-pointer items-center px-3 py-2.5 ${activeBgClass} border-b border-whatsapp-header-bg hover:bg-whatsapp-active-chat`}
       onClick={() => onSelectChat(chat)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
